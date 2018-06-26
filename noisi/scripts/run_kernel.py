@@ -313,10 +313,13 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                     continue
                 for j in range(len(f)):
                     delta = f[j].stats.delta
-                    
-                    kern[ix_f,i,j] = np.dot(corr_temp,f[j].data) * delta
-                    
 
+                    f_scale = np.max(f[j].data)
+                    adjt_stf = f[j].data/f_scale
+                    
+                    kern[ix_f,i,j] = np.dot(corr_temp,adjt_stf) * delta
+                    
+                    kern[ix_f,i,j] *= f_scale
                     #elif measr_conf['mtype'] in ['envelope']:
                     #    if j == 0:
                     #        corr_temp_h = corr_temp

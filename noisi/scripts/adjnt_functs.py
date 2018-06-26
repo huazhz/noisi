@@ -67,7 +67,25 @@ def square_envelope(corr_o,corr_s,g_speed,
     success = True
     return adjt_src, success
 
+def ln_square_envelope(corr_o,corr_s,g_speed,
+    window_params):
+    success = False
+    env_s = corr_s.data**2 + np.imag(hilbert(corr_s.data))**2
+    env_o = corr_o.data**2 + np.imag(hilbert(corr_o.data))**2
+    
+    # to avoid numerical issues, scale the traces
+    # now and scale the adjoint source back later
+    scfc = env_s.max()
+    env_s /= scfc
+    
+    term1 = (np.log(env_s)-np.log(env_o)) / env_s
+    term2 = np.imag(hilbert(corr_s.data))
+    a =  term1 * corr_s.data
+    b = np.imag(hilbert(term1 * term2 ))
 
+    adjt_src = 2. * (a-b) / scfc
+    success = True
+    return adjt_src, success
 
 
 def energy(corr_o,corr_s,g_speed,window_params):
@@ -106,6 +124,9 @@ def get_adj_func(mtype):
 
     elif mtype == 'square_envelope':
         func = square_envelope
+
+    elif mtype == 'ln_sq_env':
+        func = ln_square_envelope
 
     else:
         msg = 'Measurement functional %s not currently implemented.' %mtype

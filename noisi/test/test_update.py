@@ -1,5 +1,7 @@
 import os
 from noisi import NoiseSource
+from noisi.scripts.create_update import create_update
+import warnings
 
 def test_update():
 	# copy data
@@ -18,7 +20,17 @@ def test_update():
 	
 
 	# run forward model
-	os.system('./test/testdata/testsrc/update.sh')
+	#os.system('./test/testdata/testsrc/update.sh')
+	source_model = 'test/testdata/testsrc'
+	oldstep = 0
+	grad_file = 'test/testdata/testsrc/step_0/grad/grad_all.npy'
+	step_length = 1.e10
+
+
+	warnings.filterwarnings("ignore") # otherwise a warning is printed about
+	# the gradient being clipped at zero
+
+	create_update(source_model,oldstep,grad_file,step_length)
 
 	# assert the results are the same
 	# ToDo: path

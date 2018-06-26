@@ -12,6 +12,8 @@ def test_aa_noisi():
 test/testdata/testsrc/source_config.json')
     os.system('cp test/testdata/testsrc/measr_config_archived.json \
 test/testdata/testsrc/measr_config.json')
+    os.system('cp test/testdata/testsrc/inverse_config_archived.json \
+test/testdata/testsrc/inverse_config.json')
     
     os.system('rm -rf test/testdata/testsrc/wavefield_processed/')
     

@@ -91,6 +91,13 @@ def setup_source(source_model):
     with io.open(os.path.join(source_model,'measr_config.json'),'w') as fh:
         cf = json.dumps(conf,sort_keys=True, indent=4, separators=(",", ": "))
         fh.write(cf)
+
+    with io.open(os.path.join(_ROOT,'config','inverse_config.json'),'r') as fh:
+        conf = json.loads(fh.read())
+
+    with io.open(os.path.join(source_model,'inverse_config.json'),'w') as fh:
+        cf = json.dumps(conf,sort_keys=True, indent=4, separators=(",", ": "))
+        fh.write(cf)
     
     from . import _ROOT
     os.system('cp {} {}'.format(os.path.join(_ROOT,'jnotebks/\

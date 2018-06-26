@@ -11,26 +11,18 @@ from noisi.my_classes.noisesource import NoiseSource
 from warnings import warn
 ####################################
 # ToDo: more fancy and more secure with click or argparse
-source_model = sys.argv[1]
-oldstep = int(sys.argv[2])
-grad_file = sys.argv[3]
-grad_old = sys.argv[4]
-update_mode = sys.argv[5]#'conjgrad'# steepest, conjgrad
-min_snr = float(sys.argv[6])#min_snr = 5.0
-min_stck = int(sys.argv[7])#min_stck = 320.
-nr_msr = int(sys.argv[8])#nr_msr = 300
-step_length = float(sys.argv[9])#step_length = 
-mode = sys.argv[10] # 'max', 'random'
-# Give as part per hundred, e.g 0.1 for 10%
-perc_step_length = None
-# include those data points in the test which are at or above this
-# fraction of maximum misfit:
-perc_of_max_misfit = 0.6666
-# Only if the following is set to True, a small subset (nr_msr) 
-# of data will be selected and copied and their misfit evaluated
-# for a step length test. Otherwise, only the update of the source model
-# is performed. 
 
+#grad_old = sys.argv[4]
+#update_mode = sys.argv[5]
+
+# grad_file = sys.argv[3]
+#'conjgrad'# steepest, conjgrad
+#min_snr = float(sys.argv[6])#min_snr = 5.0
+#min_stck = int(sys.argv[7])#min_stck = 320.
+#nr_msr = int(sys.argv[8])#nr_msr = 300
+#step_length = 
+#mode = sys.argv[10] # 'max', 'random'
+# Give as part per hundred, e.g 0.1 for 10%
 ####################################
 
 
@@ -70,10 +62,6 @@ def _update_steepestdesc(model,
 			#src_model.model['distr_basis'][:] += neg_grad/np.max(np.abs(neg_grad)) * perc_step_length
 			descent_direction = neg_grad/np.max(np.abs(neg_grad)) * perc_step_length
 
-# write to file
-# close the underlying h5 file	
-	#src_model.model.close()
-
 	return(descent_direction)
 
 def _update_conjugategrad(
@@ -84,10 +72,7 @@ def _update_conjugategrad(
 	updatename,
 	step_length
 	):
-# just in case:
-	#os.system('cp {} {}'.format(model,model+'.bak'))
 
-	#src_model = NoiseSource(model)
 
 	# determine beta
 	norm_neggrad = np.linalg.norm(-1.*neg_grad,ord=2,axis=(1))
@@ -102,10 +87,6 @@ def _update_conjugategrad(
 	upd = neg_grad + beta_update
 	np.save(updatename,upd)
 
-	# save the update so it can be used to determine the next step
-	#np.save(updatename,upd)
-
-	#src_model.model['distr_basis'][:] += step_length * upd
 	descent_direction = step_length * upd
 	
 
@@ -116,10 +97,12 @@ def _update_conjugategrad(
 
 
 
-def _prepare_test_steplength(msrfile,source_config,newdir):
+def _prepare_test_steplength(msrfile,source_config,newdir,step_length,
+	perc_step_length=None):
 	
 	obs_dir = os.path.join(source_config['source_path'],'observed_correlations')
-
+	inverse_config = json.load(open(os.path.join(source_config['source_path'],
+		'inverse_config.json')))
 
 	# Read in the csv files of measurement.
 	for mfile in msrfile:
@@ -134,18 +117,19 @@ def _prepare_test_steplength(msrfile,source_config,newdir):
 
 	# Get a set of n randomly chosen station pairs. Criteria: minimum SNR, 
 	# ---> prelim_stations.txt
-	
-	# this makes no sense for combined measure
-	#data_accept = data[(data.snr >= min_snr)]
-	#if len(data_accept) == 0:
-#		raise ValueError('No data match selection criteria.')
+	min_stck = inverse_config['min_stack_length']
+	min_snr = inverse_config['min_snr']
+	mode = inverse_config['data_selection_for_linesearch']
+	nr_msr = inverse_config['nr_measurements_for_linesearch']
+	source_path = source_config['source_path']
 
-	#data_accept = data_accept[(data_accept.snr_a >= min_snr)]
-	#if len(data_accept) == 0:
-#		raise ValueError('No data match selection criteria.')
 
-	#data_accept = data_accept[(data_accept.nstack >= min_stck)]
-	data_accept = data[(data.nstack >= min_stck)]
+
+	data_accept = data[(data.snr >= min_snr) | (data.snr_a >= min_snr)]
+	if len(data_accept) == 0:
+		raise ValueError('No data match selection criteria.')
+
+	data_accept = data_accept[(data_accept.nstack >= min_stck)]
 	if len(data_accept) == 0:
 		raise ValueError('No data match selection criteria.')
 	
@@ -171,15 +155,11 @@ def _prepare_test_steplength(msrfile,source_config,newdir):
 	
 	print(data_select)
 
-	#data_select = pd.concat([data_select1,data_select2])
 	
-	#stafile = open(os.path.join(newdir,'stations_slt.txt'),'w')
-	#stafile.write("Station pairs to be used for step lenght test:\n")
-
 	inffile = open(os.path.join(newdir,'step_length_test_info.txt'),'w')
 	inffile.write('Parameters:\n')
-	inffile.write('source_model: %s\n' %source_model)
-	inffile.write('old step: %s\n' %oldstep)
+	inffile.write('source_model_path: %s\n' %source_path)
+	#inffile.write('old step: %s\n' %oldstep)
 	inffile.write('min_snr %g\n' %min_snr)
 	inffile.write('min_stck %g\n' %min_stck)
 
@@ -210,7 +190,8 @@ def _prepare_test_steplength(msrfile,source_config,newdir):
 		#synth_filename = os.path.join(datadir,'corr','{}--{}.sac'.format(sta1,sta2))
 		#print(synth_filename)
 		# copy the relevant observed correlation, oh my
-		obs_dir = os.path.join(source_config['source_path'],'observed_correlations')
+		obs_dir = os.path.join(source_config['source_path'],
+			'observed_correlations')
 		obs_correlations = glob_obs_corr('{}.{}.{}.{}'.format(*sta1),
 			'{}.{}.{}.{}'.format(*sta2),obs_dir,ignore_network=True)
 		
@@ -244,70 +225,102 @@ def _prepare_test_steplength(msrfile,source_config,newdir):
 ############ Preparation procedure #################################################
 #prepare_test_steplength = False
 # where is the measurement database located?
-source_model = os.path.join(source_model,'source_config.json')
-source_config=json.load(open(source_model))
-datadir = os.path.join(source_config['source_path'],'step_' + str(oldstep))
-msrfile = os.path.join(datadir,"{}.*.measurement.csv".format(source_config['mtype']))
-msrfile = glob(msrfile)
+def create_update(source_path,oldstep,grad_file,step_length,
+	project=False,smooth=False,perc_step_length=None):
 
-# Initialize the new step directory
-newstep = int(oldstep) + 1
-newdir = os.path.join(source_config['source_path'],'step_' + str(newstep))
+	inverse_config = json.load(open(os.path.join(source_path,
+		'inverse_config.json')))
+	
+	source_config=json.load(open(os.path.join(source_path,
+		'source_config.json')))
 
-if not os.path.exists(newdir):
-	newdir = os.path.join(source_config['source_path'],'step_' + str(newstep))
-	os.mkdir(newdir)
-	os.mkdir(os.path.join(newdir,'obs_slt'))
-	os.mkdir(os.path.join(newdir,'corr'))
-	os.mkdir(os.path.join(newdir,'adjt'))
-	os.mkdir(os.path.join(newdir,'grad'))
-	os.mkdir(os.path.join(newdir,'kern'))
-	_prepare_test_steplength(msrfile,source_config,newdir)
+	datadir = os.path.join(source_config['source_path'],'step_' + str(oldstep))
+	msrfile = os.path.join(datadir,"{}.*.measurement.csv".
+		format(source_config['mtype']))
+	msrfile = glob(msrfile)
 
-os.system('cp {} {}'.format(os.path.join(datadir,'base_model.h5'),newdir))
-os.system('cp {} {}'.format(os.path.join(datadir,'starting_model.h5'),newdir))
+	# Initialize the new step directory
+	newstep = int(oldstep) + 1
+	newdir = os.path.join(source_config['source_path'],'step_' + 
+		str(newstep))
 
+	if oldstep > 0:
+		olddir = os.path.join(source_config['source_path'],'step_' +
+		 str(oldstep-1))
+	else:
+		olddir = datadir
+	grad_old = os.path.join(olddir,'grad',os.path.basename(grad_file))
 
-# Set up a prelim_sourcemodel.h5: 
-# Contains starting model + step length * (-grad) for steepest descent
-# This would be the point to project to some lovely basis functions..
-grad = grad_file
+	if not os.path.exists(newdir):
+		newdir = os.path.join(source_config['source_path'],
+			'step_' + str(newstep))
+		os.mkdir(newdir)
+		os.mkdir(os.path.join(newdir,'obs_slt'))
+		os.mkdir(os.path.join(newdir,'corr'))
+		os.mkdir(os.path.join(newdir,'adjt'))
+		os.mkdir(os.path.join(newdir,'grad'))
+		os.mkdir(os.path.join(newdir,'kern'))
+		_prepare_test_steplength(msrfile,source_config,
+			newdir,step_length,perc_step_length)
 
-neg_grad = -1. * np.load(grad)
-old_grad = np.load(grad_old)
-
-neg_grad = np.array(neg_grad,ndmin=2)
-old_grad = np.array(old_grad,ndmin=2)
-
-new_sourcemodel = os.path.join(newdir,'starting_model.h5')
-new_update = os.path.join(newdir,'grad','update.npy')
-old_upd = os.path.join(datadir,'grad','update.npy')
-
-src_model = NoiseSource(new_sourcemodel)
-
-if not os.path.exists(old_upd):
-	old_upd = -1. * old_grad.copy()
-else:
-	old_upd = np.load(old_upd)
-
-if update_mode == 'steepest':
-
-	descent_direction = _update_steepestdesc(new_sourcemodel,neg_grad,step_length=step_length,
-	perc_step_length=perc_step_length,project=False,smooth=False)
-
-elif update_mode == 'conjgrad':
-	descent_direction, update = _update_conjugategrad(new_sourcemodel,neg_grad,old_grad,
-	old_upd,new_update,step_length)
-	np.save(new_update,update)
+	os.system('cp {} {}'.format(os.path.join(datadir,'base_model.h5'),newdir))
+	os.system('cp {} {}'.format(os.path.join(datadir,'starting_model.h5'),newdir))
+	os.system('cp {} {}'.format(os.path.join(source_config['source_path'],
+		'measr_config.json'),os.path.join(newdir,'measr_config_archived.json')))
+	os.system('cp {} {}'.format(os.path.join(source_config['source_path'],
+		'source_config.json'),os.path.join(newdir,'source_config_archived.json')))
+	os.system('cp {} {}'.format(os.path.join(source_config['source_path'],
+		'inverse_config.json'),os.path.join(newdir,'inverse_config_archived.json')))
 
 
-src_model.model['distr_basis'][:] += descent_direction
+	# Set up a prelim_sourcemodel.h5: 
+	# Contains starting model + step length * (-grad) for steepest descent
+	# This would be the point to project to some lovely basis functions..
+	grad = grad_file
+
+	neg_grad = -1. * np.load(grad)
+	old_grad = np.load(grad_old)
+
+	neg_grad = np.array(neg_grad,ndmin=2)
+	old_grad = np.array(old_grad,ndmin=2)
+
+	new_sourcemodel = os.path.join(newdir,'starting_model.h5')
+	new_update = os.path.join(newdir,'grad','update.npy')
+	old_upd = os.path.join(datadir,'grad','update.npy')
+
+	src_model = NoiseSource(new_sourcemodel)
+
+	if not os.path.exists(old_upd):
+		old_upd = -1. * old_grad.copy()
+	else:
+		old_upd = np.load(old_upd)
+
+	if inverse_config['update_scheme'] == 'steepest_descent':
+
+		descent_direction = _update_steepestdesc(new_sourcemodel,neg_grad,
+		step_length=step_length,perc_step_length=perc_step_length,
+		project=False,smooth=False)
+
+	elif inverse_config['update_scheme'] == 'conjugate_gradient':
+		descent_direction, update = _update_conjugategrad(new_sourcemodel,
+		neg_grad,old_grad,old_upd,new_update,step_length)
+		np.save(new_update,update)
 
 
-if src_model.model['distr_basis'][:].min() < 0.:
-		warn('Step length leads to negative source model...reset values to be >=0.')
-		src_model.model['distr_basis'][:] = src_model.model['distr_basis'][:].clip(0.0)
+	src_model.model['distr_basis'][:] += descent_direction
 
-src_model.model.close()
+
+	if src_model.model['distr_basis'][:].min() < 0.:
+			warn('Step length leads to negative source model...reset values to be >=0.')
+			src_model.model['distr_basis'][:] = src_model.model['distr_basis'][:].clip(0.0)
+
+	src_model.model.close()
+
+if __name__=="__main__":
+	source_path = sys.argv[1]
+	oldstep = int(sys.argv[2])
+	grad_file = sys.argv[3]
+	step_length = float(sys.argv[4])
+	create_update(source_path,oldstep,grad_file,step_length)
 # (outside of this script) forward model selected correlations
 # (outside of this script) evaluate misfit for selected correlations

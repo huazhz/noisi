@@ -14,6 +14,7 @@ def setup_proj(project_name):
     conf['date_created'] = time.strftime("%Y.%m.%d")
     conf['project_name'] = project_name
     conf['project_path'] = os.path.abspath(project_name)
+    conf['wavefield_path'] = os.path.abspath(project_name)+'/path_to_wavefield'
     
     with io.open(os.path.join(project_name,'config.json'),'w') as fh:
         cf = json.dumps(conf,sort_keys=True, indent=4, separators=(",", ": "))
