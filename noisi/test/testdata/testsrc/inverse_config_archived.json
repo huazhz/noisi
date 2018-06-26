@@ -1,0 +1,9 @@
+{
+    "update_scheme": "conjugate_gradient",
+    "min_snr": 0.0,
+    "min_stack_length": 0,
+    "nr_measurements_for_linesearch": 1,
+    "data_selection_for_linesearch": "max",
+    "gradient_smoothing_length_in_m": 0,
+    "gradient_clipping_percentile": 95
+}
