@@ -13,7 +13,7 @@ from scipy.signal import hilbert
 # *********************************************
 #scale = 1e20 #ununsed
 steps = np.arange(-14, 0, 0.1)
-mtype = 'square_envelope'#'ln_energy_ratio'
+mtype = 'ln_sq_env'#'ln_energy_ratio'
 sacdict = {'dist':1e6}
 g_speed = 3700.
 window_params                   =    {}
@@ -75,7 +75,8 @@ elif mtype == 'windowed_waveform':
 
 if mtype in ['ln_energy_ratio','energy_diff']:
 	j = 0.5*(msr_s-msr_o)**2
-elif mtype in ['windowed_waveform','square_envelope','envelope']:
+elif mtype in ['windowed_waveform','square_envelope',
+'envelope','ln_sq_env']:
 	j = 0.5 * np.sum(np.power((msr_s-msr_o),2))
 
 # testing the test:
@@ -102,7 +103,8 @@ for step in steps:
 		msr_sh = msr_sh[0] + msr_sh[1]
 
 	jh = 0.5 * (msr_sh - msr_o)**2
-	if mtype in ['windowed_waveform','envelope','square_envelope']:
+	if mtype in ['windowed_waveform','envelope','square_envelope',
+	'ln_sq_env']:
 		jh = 0.5 * np.sum(np.power((msr_sh-msr_o),2))
 	# testing the test:
 	# jh, dn = l2_simple(d_ch,c_obs)

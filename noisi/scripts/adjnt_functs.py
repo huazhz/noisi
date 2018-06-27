@@ -75,15 +75,15 @@ def ln_square_envelope(corr_o,corr_s,g_speed,
     
     # to avoid numerical issues, scale the traces
     # now and scale the adjoint source back later
-    scfc = env_s.max()
-    env_s /= scfc
+    #scfc = env_s.max()
+    env_s #/= scfc
     
     term1 = (np.log(env_s)-np.log(env_o)) / env_s
     term2 = np.imag(hilbert(corr_s.data))
     a =  term1 * corr_s.data
     b = np.imag(hilbert(term1 * term2 ))
 
-    adjt_src = 2. * (a-b) / scfc
+    adjt_src = 2. * (a-b) #/ scfc
     success = True
     return adjt_src, success
 

@@ -186,7 +186,7 @@ def measurement(source_config,mtype,step,ignore_network,
             if mtype in ['square_envelope','ln_sq_env',
             'waveform','windowed_waveform']:
                 # l2_so = np.trapz(0.5*(msr_s-msr_o)**2) * tr_o.stats.delta
-                l2_so = 0.5 * np.sum(np.power((msr_s-msr_o),2))#0.5*np.dot((msr_s-msr_o),(msr_s-msr_o))
+                l2_so = 0.5 * np.sum(np.power((msr_s-msr_o),2))
                 snr = snratio(tr_o,**options)
                 snr_a = snratio(tr_o,**_options_ac)
                 info.extend([np.nan,np.nan,np.nan,np.nan,

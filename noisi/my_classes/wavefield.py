@@ -22,9 +22,7 @@ from obspy.signal.filter import integer_decimation
 import click
 from warnings import warn
 
-#ToDo: Think about having a frequency domain field as well, maybe with keyword 'fd'    
-#ToDo: Think about getting an entire wavefield into memory
-#ToDo: Think about how to write stats and sourcegrid to disk at systematic points in the code.
+
 class WaveField(object):
     """
     Object to handle database of stored wavefields.
