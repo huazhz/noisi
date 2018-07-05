@@ -212,6 +212,8 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                 break
 
         adjt_srcs.append(f)
+    if len(f) == 0:
+        return()
         
     
 
@@ -296,12 +298,12 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
             
           
             g1g2_tr = np.multiply(np.conjugate(spec1),spec2)
-            c = np.multiply(g1g2_tr,S)
+            corr_temp = np.multiply(g1g2_tr,S)
 
         #######################################################################
         # Get Kernel at that location
         #######################################################################   
-            corr_temp = my_centered(np.fft.ifftshift(np.fft.irfft(c,n)),n_corr)
+            #corr_temp = my_centered(np.fft.ifftshift(np.fft.irfft(c,n)),n_corr)
             
         #######################################################################
         # Apply the 'adjoint source'
@@ -312,9 +314,18 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                 if f==None:
                     continue
                 for j in range(len(f)):
-                    delta = f[j].stats.delta
+                    # try first to apply only the causal part.
+                    # to figure out how this works.
+                    ix_mid = f[j].stats.npts // 2
                     
-                    kern[ix_f,i,j] = np.dot(corr_temp,f[j].data) * delta
+                    # yay this worked. Try to add the a-causal part.
+                    adjstf = np.zeros(n)
+                    adjstf[-ix_mid:] = f[j].data[0:ix_mid]
+                    adjstf[0:ix_mid+1] = f[j].data[ix_mid:]
+                    adjt_spect = np.fft.rfft(adjstf,n=n)
+                    delta = f[j].stats.sampling_rate
+
+                    kern[ix_f,i,j] = np.dot(corr_temp,adjt_spect) * delta
                     
 
                     #elif measr_conf['mtype'] in ['envelope']:
