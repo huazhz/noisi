@@ -27,7 +27,7 @@ for c in chas:
     channels.append(c[-1].upper())
 
 
-source_channel = 'MXZ'
+source_component = 'MXZ'
 
 seismo = config['synt_data']
 if seismo == 'DIS':
@@ -101,7 +101,7 @@ if not os.path.exists(f_out_name):
         traces_n = f_out.create_dataset('data_n',(ntraces,ntimesteps),
         dtype=np.float32)
     if 'E' in channels:
-        traces_z = f_out.create_dataset('data_e',(ntraces,ntimesteps),
+        traces_e = f_out.create_dataset('data_e',(ntraces,ntimesteps),
         dtype=np.float32)
     # elif if channel.upper() == 'ALL':
     #     traces_z = f_out.create_dataset('data_z',(ntraces,ntimesteps),
@@ -133,10 +133,10 @@ for i in range(startindex,ntraces):
     lon_src = f_sources[0,i]
 
     ######### ToDo! Right now, only either horizontal or vertical component sources ##########
-    if source_channel[-1] in ['E','N']:
+    if source_component[-1] in ['E','N']:
         fsrc = instaseis.ForceSource(latitude=lat_src,
                     longitude=lon_src,f_t=1.e09,f_p=1.e09)
-    elif source_channel[-1] == 'Z':
+    elif source_component[-1] == 'Z':
         fsrc = instaseis.ForceSource(latitude=lat_src,
                     longitude=lon_src,f_r=1.e09)
 
