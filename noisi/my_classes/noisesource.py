@@ -10,6 +10,7 @@ except ImportError:
 
 from noisi.util.geo import get_spherical_surface_elements
 
+
 class NoiseSource(object):
     """
    'model' of the noise source that comes in terms of a couple of basis 
@@ -18,7 +19,6 @@ class NoiseSource(object):
     functions.
     
     """
-    
     
     def __init__(self,model,w='r+'):
             
@@ -39,6 +39,7 @@ class NoiseSource(object):
             try:
                 self.surf_area = self.model['surf_areas'][:]
             except KeyError:
+                print("Determining surface areas of spherical grid elements...")
                 # approximate as spherical surface elements...
                 self.surf_area = get_spherical_surface_elements(
                                             self.src_loc[0],self.src_loc[1])

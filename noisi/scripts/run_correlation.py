@@ -7,6 +7,8 @@ import json
 import click
 from glob import glob
 from math import ceil
+from re import sub
+from collections import deque
 from scipy.signal.signaltools import fftconvolve
 try:
     from scipy.fftpack import next_fast_len
@@ -28,6 +30,10 @@ from noisi.util.corr_pairs import define_correlationpairs,rem_fin_prs,rem_no_obs
 import matplotlib.pyplot as plt
 import instaseis
 
+comp_dict = {'data':'Z',
+                'data_z':'Z',
+                'data_e':'T',
+                'data_n':'R'}
 
 #ToDo: put in the possibility to run on mixed channel pairs
 def paths_input(cp,source_conf,step,ignore_network,instaseis):
@@ -35,22 +41,25 @@ def paths_input(cp,source_conf,step,ignore_network,instaseis):
     inf1 = cp[0].split()
     inf2 = cp[1].split()
     
-    conf = json.load(open(os.path.join(source_conf['project_path'],'config.json')))
-    channel = source_conf['channel']
+    conf = json.load(open(os.path.join(source_conf['project_path'],
+        'config.json')))
+    # don't add a channel now, wavefield files may have several
+    # channel = source_conf['channel']
     
     # station names
     if ignore_network:
-        sta1 = "*.{}..{}".format(*(inf1[1:2]+[channel]))
-        sta2 = "*.{}..{}".format(*(inf2[1:2]+[channel]))
+        sta1 = "*.{}..*".format(*(inf1[1:2]))
+        sta2 = "*.{}..*".format(*(inf2[1:2]))
     else:
-        sta1 = "{}.{}..{}".format(*(inf1[0:2]+[channel]))
-        sta2 = "{}.{}..{}".format(*(inf2[0:2]+[channel]))
+        sta1 = "{}.{}..*".format(*(inf1[0:2]))
+        sta2 = "{}.{}..*".format(*(inf2[0:2]))
 
 
     # Wavefield files  
     if instaseis == False:
         if source_conf['preprocess_do']:
-            dir = os.path.join(source_conf['source_path'],'wavefield_processed')
+            dir = os.path.join(source_conf['source_path'],
+                'wavefield_processed')
             
         else:
             dir = conf['wavefield_path']
@@ -58,8 +67,8 @@ def paths_input(cp,source_conf,step,ignore_network,instaseis):
         wf1 = glob(os.path.join(dir,sta1+'.h5'))[0]
         wf2 = glob(os.path.join(dir,sta2+'.h5'))[0]
     else:
-        # need to return two receiver coordinate pairs. For buried sensors, depth could be used but no elevation is possible, 
-        
+        # need to return two receiver coordinate pairs. For buried sensors,
+        # depth could be used but no elevation is possible, 
         # so maybe keep everything at 0 m?
         # lists of information directly from the stations.txt file.
         wf1 = inf1
@@ -88,9 +97,10 @@ def path_output(cp,source_conf,step):
         inf2 = cp[0].split()
         inf1 = cp[1].split()
 
-    channel = source_conf['channel']
-    sta1 = "{}.{}..{}".format(*(inf1[0:2]+[channel]))
-    sta2 = "{}.{}..{}".format(*(inf2[0:2]+[channel]))
+    # add channels later - there may be several
+    #channel = source_conf['channel']
+    sta1 = "{}.{}..CHA".format(*(inf1[0:2]))
+    sta2 = "{}.{}..CHA".format(*(inf2[0:2]))
 
         
     corr_trace_name = "{}--{}.sac".format(sta1,sta2)    
@@ -135,7 +145,52 @@ def get_ns(wf1,source_conf,insta):
     n_corr = 2*n_lag + 1
     
     return nt,n,n_corr,Fs
-        
+     
+def get_sac_filename(corr_file,channels):
+    cha_1 = 'MX' + channels[0]
+    cha_2 = 'MX' + channels[1]
+
+    corr_file = sub('CHA',cha_1,corr_file,1)
+    corr_file = sub('CHA',cha_2,corr_file)
+    return corr_file
+
+def setup_sac_trace(correlation, Fs):
+    trace = Trace()
+    trace.stats.sampling_rate = Fs
+    trace.data = correlation
+    # try to add some meta data
+    try:
+        sta1 = wf1.stats['reference_station']
+        sta2 = wf2.stats['reference_station']
+        trace.stats.station = sta1.split('.')[1]
+        trace.stats.network = sta1.split('.')[0]
+        trace.stats.location = sta1.split('.')[2]
+        trace.stats.channel = sta1.split('.')[3]
+        trace.stats.sac = {}
+        trace.stats.sac['kuser0']  =   sta2.split('.')[1]
+        trace.stats.sac['kuser1']  =   sta2.split('.')[0]
+        trace.stats.sac['kuser2']  =  sta2.split('.')[2]
+        trace.stats.sac['kevnm']   =   sta2.split('.')[3]
+    except:
+        pass  
+    return trace 
+
+def possible_correlations(comps):
+
+    n = len(comps)
+    correlation_names = []
+
+    out_comps = [comp_dict[comp] for comp in comps]
+    d_out_comps = deque(out_comps)
+
+    print(out_comps)
+    print(d_out_comps)
+    for ix_comp in range(n):
+        d_out_comps.rotate()
+        correlation_names.extend([out_comps[ix_c]+d_out_comps[ix_c] 
+            for ix_c in range(n)])
+
+    return correlation_names
     
 def g1g2_corr(wf1,wf2,corr_file,src,source_conf,insta):
     """
@@ -157,15 +212,18 @@ def g1g2_corr(wf1,wf2,corr_file,src,source_conf,insta):
 
     with NoiseSource(src) as nsrc:
 
+        
         ntime, n, n_corr, Fs = get_ns(wf1,source_conf,insta)
 
+        if n%2 == 0:
+            n_freq = int((n/2)+1)
+        else:
+            n_freq = int((n+1)/2)
     # use a one-sided taper: The seismogram probably has a non-zero end, 
     # being cut off whereever the solver stopped running.
         taper = cosine_taper(ntime,p=0.01)
         taper[0:ntime//2] = 1.0
         ntraces = nsrc.src_loc[0].shape[0]
-
-        correlation = np.zeros(n_corr)
 
         if insta:
             # open database
@@ -180,11 +238,31 @@ def g1g2_corr(wf1,wf2,corr_file,src,source_conf,insta):
             lat2 = geograph_to_geocent(float(wf2[2]))
             lon2 = float(wf2[3])
             rec2 = instaseis.Receiver(latitude=lat2,longitude=lon2)
+            comps=['Z','Z'] # for now...
 
         else:
             wf1 = WaveField(wf1)
             wf2 = WaveField(wf2)
+            comps = list(wf1.components.keys())
+            
+           
 
+        
+        
+        if list(wf2.components.keys()) != comps:
+            raise ValueError('Components of wavefields must match.')
+            # better: just use the available components
+        
+        # initialize arrays for components of the 
+        # Green's function spectra:             
+        s1 = np.zeros((len(wf1.components),n_freq),dtype=np.complex)
+        s2 = np.zeros((len(wf2.components),n_freq),dtype=np.complex)
+        
+
+        # and for the correlations
+        correlation_names = possible_correlations(comps)
+        correlation = np.zeros((len(comps)**2,n_corr))
+        
             
         # Loop over source locations
         for i in range(ntraces):
@@ -205,68 +283,66 @@ def g1g2_corr(wf1,wf2,corr_file,src,source_conf,insta):
                 fsrc = instaseis.ForceSource(latitude=lat_src,
                     longitude=lon_src,f_r=1.e12)
                 
-                s1 = np.ascontiguousarray(db.get_seismograms(source=fsrc,
+                s1['data_z'] = np.ascontiguousarray(db.get_seismograms(source=fsrc,
                     receiver=rec1,
                     dt=1./source_conf['sampling_rate'])[0].data*taper)
-                s2 = np.ascontiguousarray(db.get_seismograms(source=fsrc,
+                s2['data_z'] = np.ascontiguousarray(db.get_seismograms(source=fsrc,
                     receiver=rec2,
                     dt=1./source_conf['sampling_rate'])[0].data*taper)
                 
 
             else:
             # read Green's functions
-                s1 = np.ascontiguousarray(wf1.data[i,:]*taper)
-                s2 = np.ascontiguousarray(wf2.data[i,:]*taper)
+                #s1 = np.ascontiguousarray(wf1.data[i,:]*taper)
+                #s2 = np.ascontiguousarray(wf2.data[i,:]*taper)
+                for ix_comp in range(len(wf1.components)):
+                    cname = comps[ix_comp]
+                    # Fourier transform for greater ease of convolution
+                    s1[ix_comp,:] = np.fft.rfft(np.ascontiguousarray(wf1.
+                        components[cname][i,:] * taper),n)
+                    s2[ix_comp,:] = np.fft.rfft(np.ascontiguousarray(wf2.
+                        components[cname][i,:] * taper),n)
+                    # Fourier transform for greater ease of convolution
+                    #s1[cname] = np.fft.rfft(s1[cname],n)
+                    #s2[cname] = np.fft.rfft(s2[cname],n)
             
             
-            # Fourier transform for greater ease of convolution
-            spec1 = np.fft.rfft(s1,n)
-            spec2 = np.fft.rfft(s2,n)
             
-            # convolve G1G2
-            g1g2_tr = np.multiply(np.conjugate(spec1),spec2)
+            for ix_comp in range(len(comps)):
+                # permute the list and array
+                s2 = np.roll(s2,1,axis=0)
+
+                # convolve G1*G2
+                #g1g2_tr = np.multiply(np.conjugate(spec1),spec2)
+                g1g2_tr = np.multiply(np.conjugate(s1),s2)
+                # convolve noise source
+                c = np.multiply(g1g2_tr,S)
+             
+                # transform back    
+                C = np.fft.ifftshift(np.fft.irfft(c,n))
+                correlation[ix_comp*len(comps):(ix_comp+1)*len(comps),:] += \
+                my_centered(C,n_corr) * nsrc.surf_area[i]
             
-            # convolve noise source
-            c = np.multiply(g1g2_tr,S)
-            
-            # transform back    
-            correlation += my_centered(np.fft.ifftshift(np.fft.irfft(c,n)),
-                n_corr) * nsrc.surf_area[i]
-            
-            # occasional info
-            if i%50000 == 0:
-                print("Finished {} source locations.".format(i))
+                # occasional info
+                if i%50000 == 0:
+                    print("Finished {} source locations.".format(i))
 ###################### end of loop over all source locations ###################
 
         if not insta:
             wf1.file.close()
             wf2.file.close()
 
-        # save output
-        trace = Trace()
-        trace.stats.sampling_rate = Fs
-        trace.data = correlation
-# try to add some meta data
-        try:
-            sta1 = wf1.stats['reference_station']
-            sta2 = wf2.stats['reference_station']
-            trace.stats.station = sta1.split('.')[1]
-            trace.stats.network = sta1.split('.')[0]
-            trace.stats.location = sta1.split('.')[2]
-            trace.stats.channel = sta1.split('.')[3]
-            trace.stats.sac = {}
-            trace.stats.sac['kuser0']  =   sta2.split('.')[1]
-            trace.stats.sac['kuser1']  =   sta2.split('.')[0]
-            trace.stats.sac['kuser2']  =  sta2.split('.')[2]
-            trace.stats.sac['kevnm']   =   sta2.split('.')[3]
-        except:
-            pass
 
-        trace.write(filename=corr_file,format='SAC')
+        for ix_corr in range(len(correlation_names)):
+            corr_filename = get_sac_filename(corr_file,
+                correlation_names[ix_corr])
+            trace = setup_sac_trace(correlation[ix_corr],Fs)
+            trace.write(filename=corr_filename,format='SAC')
         
 
 
-def run_corr(source_configfile,step,steplengthrun=False,ignore_network=False):
+def run_corr(source_configfile,step,steplengthrun=False,
+    ignore_network=False):
 
 
     # simple embarrassingly parallel run:
@@ -332,16 +408,16 @@ def run_corr(source_configfile,step,steplengthrun=False,ignore_network=False):
         # requested that isn't in the database)
         # if unknown errors occur and no correlations are computed, comment try-
         # except to see the error messages.
-        #try:
-        wf1,wf2,src = paths_input(cp,source_config,
+        try:
+            wf1,wf2,src = paths_input(cp,source_config,
                 step,ignore_network,insta)
-        print(wf1,wf2,src)
-        corr = path_output(cp,source_config,step)
-        print(corr) 
-        #except:
-         #   print('Could not determine correlation for: %s\
-          #   \nCheck if wavefield .h5 file is available.' %cp)
-           # continue
+            print(wf1,wf2,src)
+            corr = path_output(cp,source_config,step)
+            print(corr) 
+        except:
+            print('Could not determine correlation for: %s\
+             \nCheck if wavefield .h5 file is available.' %cp)
+            continue
             
         if os.path.exists(corr):
             continue

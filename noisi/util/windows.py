@@ -4,21 +4,28 @@ from warnings import warn
 def my_centered(arr, newsize):
 
     # pad with zeros, if newsize > len(arr)
-    newarr = np.zeros(newsize)
-
+    if arr.ndim == 1:
+        arr = np.array(arr,ndmin=2)
+    print(arr.shape)
+    newarr = np.zeros((arr.shape[0],newsize))
+    
     # get the center portion of a 1-dimensional array correctly
-    n = len(arr)
+    n = arr.shape[-1]
     i0 = (n - newsize) // 2
-    if n%2 == 0: # This is somehow a matter of definition, cause the array has no 'center' sample
+    if n%2 == 0: # This is somehow a matter of definition, 
+    # cause the array has no 'center' sample
         i0 += 1
     
     if i0 < 0:
 
         i0 = (newsize - n) // 2
-        newarr[i0:i0+n] += arr
+        
+        for k in range(newarr.ndim):
+            newarr[k,i0:i0+n] += arr
 
     else:
-        newarr[:] += arr[i0:i0+newsize]
+        for k in range(newarr.shape[0]):
+            newarr[k,:] += arr[k,i0:i0+newsize]
 
 
     return newarr

@@ -212,7 +212,8 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                 break
 
         adjt_srcs.append(f)
-        
+    if len(f) == 0:
+        return()
     
 
 ########################################################################

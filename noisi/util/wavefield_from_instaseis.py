@@ -20,7 +20,23 @@ source_config=json.load(open('source_config.json'))
 config = json.load(open('../config.json'))
 Fs = source_config['sampling_rate']
 path_to_db = config['wavefield_path']
-channel = source_config['channel']
+
+chas = config['station_channels']
+channels = []
+for c in chas:
+    channels.append(c[-1].upper())
+
+
+source_channel = 'MXZ'
+
+seismo = config['synt_data']
+if seismo == 'DIS':
+    seismo_kind = 'displacement'
+elif seismo == 'VEL':
+    seismo_kind = 'velocity'
+elif seismo == 'ACC':
+    seismo_kind = 'acceleration'
+
 
 # read sourcegrid
 f_sources = np.load('../sourcegrid.npy')
@@ -47,7 +63,13 @@ print(net,sta,lat,lon)
 if rank == 0:
 	os.system('mkdir -p wavefield_processed')
 
-f_out_name = '{}.{}..{}.h5'.format(net,sta,channel)
+if len(channels) == 3:
+    cha = 'ALL'
+elif len(channels) == 1:
+    cha = chas[0]
+else:
+    cha = channels[0]+'_'+channels[1]
+f_out_name = '{}.{}...h5'.format(net,sta,cha)
 f_out_name = os.path.join('wavefield_processed',f_out_name)
 
 
@@ -72,22 +94,38 @@ if not os.path.exists(f_out_name):
     rec1 = instaseis.Receiver(latitude=lat1,longitude=lon1)
     
     # DATASET Nr 3: Seismograms itself
-    traces = f_out.create_dataset('data',(ntraces,ntimesteps),dtype=np.float32)
-    if channel[-1] == 'Z':
-    	c_index = 0
-    elif channel[-1] == 'R':
-    	c_index = 1
-    elif channel[-1] == 'T':
-    	c_index = 2
+    if 'Z' in channels:
+        traces_z = f_out.create_dataset('data_z',(ntraces,ntimesteps),
+        dtype=np.float32)
+    if 'N' in channels:
+        traces_n = f_out.create_dataset('data_n',(ntraces,ntimesteps),
+        dtype=np.float32)
+    if 'E' in channels:
+        traces_z = f_out.create_dataset('data_e',(ntraces,ntimesteps),
+        dtype=np.float32)
+    # elif if channel.upper() == 'ALL':
+    #     traces_z = f_out.create_dataset('data_z',(ntraces,ntimesteps),
+    #     dtype=np.float32)
+    #     traces_n = f_out.create_dataset('data_n',(ntraces,ntimesteps),
+    #     dtype=np.float32)
+    #     traces_e = f_out.create_dataset('data_e',(ntraces,ntimesteps),
+    #     dtype=np.float32)
+
 
 else:
+
     f_out = h5py.File(f_out_name, "r+")
-    startindex = len(f_out['data'])  
+    if 'Z' in channels:
+        startindex = len(f_out['data_z']) 
+    elif 'E' in channels:
+        startindex = len(f_out['data_e']) 
+    elif 'N' in channels:
+        startindex = len(f_out['data_n']) 
 
 
 # jump to the beginning of the trace in the binary file
 for i in range(startindex,ntraces):
-    if i%1000 == 1:
+    if i%(0.1*ntraces) == 1:
         print('Converted %g of %g traces' %(i,ntraces))
     # read station name, copy to output file
    
@@ -95,27 +133,35 @@ for i in range(startindex,ntraces):
     lon_src = f_sources[0,i]
 
     ######### ToDo! Right now, only either horizontal or vertical component sources ##########
-    if c_index in [1,2]:
+    if source_channel[-1] in ['E','N']:
         fsrc = instaseis.ForceSource(latitude=lat_src,
                     longitude=lon_src,f_t=1.e09,f_p=1.e09)
-    elif c_index == 0:
+    elif source_channel[-1] == 'Z':
         fsrc = instaseis.ForceSource(latitude=lat_src,
                     longitude=lon_src,f_r=1.e09)
 
-    values =  db.get_seismograms(source=fsrc,receiver=rec1,dt=1./Fs)
+    values =  db.get_seismograms(source=fsrc,receiver=rec1,dt=1./Fs,
+        kind=seismo_kind)
     
-    if c_index in [1,2]:
-    	baz = gps2dist_azimuth(lat_src,lon_src,lat,lon)[2]
-    	values.rotate('NE->RT',back_azimuth=baz)
+    # I don't think rotation is practical (cross-correlations require 
+    # different orientation anyway). Todo: Figure out horizontal comp. source
+    #if c_index in [1,2]:
+   # 	baz = gps2dist_azimuth(lat_src,lon_src,lat,lon)[2]
+   # 	values.rotate('NE->RT',back_azimuth=baz)
 
-    values = values[c_index]
 
-    if config['synt_data'] in ['VEL','ACC']:
-    	values.differentiate()
-    	if config['synt_data'] == 'ACC':
-    		values.differentiate()
     # Save in traces array
-    traces[i,:] = values.data
+    if 'Z' in channels:
+        traces_z[i,:] = values[0].data
+    if 'E' in channels:
+        traces_e[i,:] = values[2].data
+    if 'N' in channels:
+        traces_n[i,:] = values[1].data
+    # elif channel.upper() == 'ALL':
+    #     traces_z[i,:] = values[0].data
+    #     traces_n[i,:] = values[1].data
+    #     traces_e[i,:] = values[2].data
+
     
     
 f_out.close()

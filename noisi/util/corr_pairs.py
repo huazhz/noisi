@@ -40,8 +40,11 @@ def define_correlationpairs(proj_dir,auto_corr=False,
 def rem_no_obs(stapairs,source_conf,directory,ignore_network=True):
 
 
-    channel = source_conf['channel']
-    channel = '??' + channel[-1]
+    #channel = '*' # I think this should work for "any" channel!
+    #source_conf['channel']
+    #channel = '??' + channel[-1]
+
+    # go for "any channel"
 
 
     stapairs_new = []
@@ -50,8 +53,8 @@ def rem_no_obs(stapairs,source_conf,directory,ignore_network=True):
         if stapairs[i] == '':
             break
        
-        sta1 = '{}.{}.*.{}'.format(*(stapairs[i][0].split()[0:2]+[channel]))
-        sta2 = '{}.{}.*.{}'.format(*(stapairs[i][1].split()[0:2]+[channel]))
+        sta1 = '{}.{}.*.*'.format(*(stapairs[i][0].split()[0:2]))
+        sta2 = '{}.{}.*.*'.format(*(stapairs[i][1].split()[0:2]))
         p_new = glob_obs_corr(sta1,sta2,directory,ignore_network)
         
         if p_new ==[]:
@@ -70,9 +73,10 @@ def rem_fin_prs(stapairs,source_conf,step):
     :param step: step nr
     """
     
-    channel = source_conf['channel']
+    #channel = source_conf['channel']
 
-    mod_dir = os.path.join(source_conf['source_path'],'step_{}'.format(step),'corr')
+    mod_dir = os.path.join(source_conf['source_path'],
+        'step_{}'.format(step),'corr')
 
 
     stapairs_new = []
@@ -88,8 +92,8 @@ def rem_fin_prs(stapairs,source_conf,step):
             inf2 = sp[0].split()
             inf1 = sp[1].split()
 
-        sta1 = "{}.{}..{}".format(*(inf1[0:2]+[channel]))
-        sta2 = "{}.{}..{}".format(*(inf2[0:2]+[channel]))
+        sta1 = "{}.{}..*".format(*(inf1[0:2]))
+        sta2 = "{}.{}..*".format(*(inf2[0:2]))
         
         corr_name = "{}--{}.sac".format(sta1,sta2)    
         corr_name = os.path.join(mod_dir,corr_name)
