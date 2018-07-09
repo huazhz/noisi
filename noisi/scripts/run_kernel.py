@@ -14,8 +14,8 @@ try:
 except ImportError:
     from noisi.borrowed_functions.scipy_next_fast_len import next_fast_len
 from obspy import Trace, read, Stream
-from noisi import NoiseSource, WaveField
-from noisi.util import geo#, natural_keys
+from noisi import NoiseSource, WaveField, BasisFunction
+from noisi.util import geo
 from obspy.signal.invsim import cosine_taper
 from noisi.util import filter
 try:
@@ -277,9 +277,12 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
         wf2 = WaveField(wf2str)
         print("Opened wave field files: "+str(time.time()-t0)+' sec')
 
-    kern = np.zeros((filtcnt,ntraces,len(adjt)))
+    kern = np.zeros((filtcnt,ntraces,len(adjt),
+        source_conf['spectra_nr_parameters']))
 
 
+    basis = BasisFunction(basis_type=source_conf['spectra_decomposition'],
+        K=source_conf['spectra_nr_parameters'],N=n_freq)
 
     
         
@@ -342,8 +345,12 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                 # inner product of corr_temp and adjoint source
                 # Factor 2: this is in freq. domain and we have 
                 # only half the spectrum by rfft (Hermitian symmetric)
-                kern[ix_f,i,ix_a] = 2. * np.dot(corr_temp,
-                    adjt_spect[ix_f,ix_a,:]) * delta
+                #kern[ix_f,i,ix_a] = 2. * np.dot(corr_temp,
+                #    adjt_spect[ix_f,ix_a,:]) * delta
+                # instead of dot product: project to basis
+                kern[ix_f,i,ix_a,:] = basis.coeff(np.real(corr_temp*
+                    adjt_spect[ix_f,ix_a,:] * 2. * delta))
+
     print("source loop done: "+str(time.time()-t0)+' sec')
     nsrc.model.close()
 
@@ -353,8 +360,8 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
 
     for ix_f in range(filtcnt):
         filename = filenames[ix_f]
-        if kern[ix_f,:,:].sum() != 0:
-            np.save(filename,kern[ix_f,:,:]) 
+        if kern[ix_f,:,:,:].sum() != 0:
+            np.save(filename,kern[ix_f,:,:,:]) 
     return()
 
        
