@@ -7,7 +7,7 @@ try:
     from noisi.util.plot import plot_grid
 except ImportError:
     print('Plotting unavailable, is basemap installed?')
-
+from noisi.my_classes.basisfunction import BasisFunction
 from noisi.util.geo import get_spherical_surface_elements
 
 class NoiseSource(object):
@@ -18,8 +18,6 @@ class NoiseSource(object):
     functions.
     
     """
-    
-    
     def __init__(self,model,w='r+'):
             
         # Model is an hdf5 file which contains the basis and weights of the source model!
@@ -27,28 +25,38 @@ class NoiseSource(object):
        
         try:
             self.model = h5py.File(model,w)
-            self.src_loc = self.model['coordinates']
-            self.freq = self.model['frequencies']
-             
-            # Presumably, these arrays are small and will be used very often --> good to have in memory.
-            self.distr_basis = self.model['distr_basis'][:]
-            self.spect_basis = self.model['spect_basis'][:]
-            self.distr_weights = self.model['distr_weights'][:]
-
-            # The surface area of each grid element...new since June 18
-            try:
-                self.surf_area = self.model['surf_areas'][:]
-            except KeyError:
-                # approximate as spherical surface elements...
-                self.surf_area = get_spherical_surface_elements(
-                                            self.src_loc[0],self.src_loc[1])
-                np.save('surface_areas_grid.npy',self.surf_area)
-            
-            self.spatial_source_model = self.expand_distr()
+            print(self.model)
             
         except IOError:
             msg = 'Unable to open model file '+model
             raise IOError(msg)
+
+        self.src_loc = self.model['coordinates']
+        self.freq = self.model['frequencies']
+        self.N = int(len(self.freq))
+        
+        try:
+            K = self.model['model'][:].shape[1]
+            self.spectral_basis = BasisFunction(
+                self.model['model'].attrs['spectral_basis'],K,N=self.N)
+            self.spectral_coefficients = self.model['model'] # don't read into memory
+            
+        except KeyError:
+           # Presumably, these arrays are small and will be used very often 
+           # --> good to have in memory.
+           self.spectral_coefficients = self.model['distr_basis'][:] #distr_basis
+           self.spectral_basis = self.model['spect_basis'][:]
+           self.N = self.spectral_basis.shape[-1]
+            # self.distr_weights = self.model['distr_weights'][:]
+            # distr basis currently unused
+
+        # The surface area of each grid element...new since June 18
+        try:
+            self.surf_area = self.model['surf_areas'][:]
+        except KeyError:
+            # approximate as spherical surface elements...
+            self.surf_area = np.ones(self.src_loc.shape[-1])
+            
 
 
         
@@ -61,47 +69,61 @@ class NoiseSource(object):
             self.model.close()
             #ToDo: Check what parameters/data should be written before file closed
 
-    def project_gridded(self):
-        pass
-
-    def expand_distr(self):
-        expand = np.dot(self.distr_weights,self.distr_basis)
-        
-        return np.array(expand,ndmin=2)
 
 
-    def get_spect(self,iloc):
+    def get_spect(self,iloc,N=None):
         # return one spectrum in location with index iloc
-        # The reason this function is for one spectrum only is that the entire gridded matrix of spectra by location is most probably pretty big.
+        # The reason this function is for one spectrum only is that the 
+        # entire gridded matrix of spectra by location is most 
+        # probably pretty big.
         
+        if N == None:
+            N = self.N
+        if N == None:
+            raise ValueError("You must set N (number of samples.)")
 
-        weights = self.spatial_source_model[:,iloc]#np.array(self.expand_distr()[:,iloc])
-        
-        
-        return np.dot(weights, self.spect_basis)
+        try:
+            spectrum = self.spectral_basis.expand(self.
+                spectral_coefficients[iloc,:],N)
+        except AttributeError:
+            spectrum = np.dot(self.spectral_coefficients[:,iloc],
+                self.spectral_basis)
+
+        return(spectrum)
     
     
     def plot(self,**options):
         
         # plot the distribution
        
-        for m in self.spatial_source_model: 
-            plot_grid(self.src_loc[0],self.src_loc[1],m,**options)
+        if self.spectral_coefficients.shape[0] < 5:       
+            for m in range(self.spectral_coefficients.shape[0]): 
+                filename = 'noise_source_coeffs_{}.png'.format(m)
+                plot_grid(self.src_loc[0],self.src_loc[1],
+                    self.spectral_coefficients[m,:],outfile=filename,
+                    **options)
 
+        else:
+            max_freq = np.zeros(self.src_loc.shape[-1])
+            for i in range(self.src_loc.shape[-1]):
+
+                spectrum = self.get_spect(i,100)
+                max_freq[i] = self.freq[spectrum.argmax()]
+
+            plot_grid(self.src_loc[0],self.src_loc[1],
+                max_freq,outfile='noise_source_dominant_freq.png',
+                sequential=True,**options)
 
     
-    # Note: Inefficient way of doing things! Whichever script needs the noise source field should rather look up things directly in the hdf5 file.
-    # But: ToDo: This could be used internally to write to a file, rather than reading from.
-    # Although: A problem to think about: noise source should behave the same, whether it is defined by model or by file. So maybe, since model will be the default option anyway, work with this!
-    #def get_spectrum(self,iloc):
+    # def get_spectrum(self,iloc):
     #    # Return the source spectrum at location nr. iloc
-    #    
+       
     #    #if self.file is not None:
     #    #    return self.sourcedistr[iloc] * self.spectra[iloc,:]
     #    if self.model is not None:
     #        return self.spectr.
     #        # (Expand from basis fct. in model)
-    #def get_sourcedistr(self,i):
+    # def get_sourcedistr(self,i):
     #    # Return the spatial distribution of max. PSD
     #    if self.file is not None:
     #        return np.multiply(self.sourcedistr[:],self.spectra[:,i])

@@ -65,7 +65,6 @@ class WaveField(object):
         else:
             self.data = self.file['data']
                
-        print(self.file)
         
         #ToDo handle complex
    # Thought about using a class method here, but need a copy of the stats!
