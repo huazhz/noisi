@@ -203,6 +203,7 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
     #adjt_srcs_cnt = 0
     delta = 1./n
     adjt_spect = np.zeros((filtcnt,len(adjt),n_freq),dtype=np.complex)
+    adjt_stfs = np.zeros((filtcnt,len(adjt),n_corr),dtype=np.float32)
     # this needs to be revised!!!
     for ix_f in range(filtcnt):
     
@@ -223,7 +224,7 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                 adjstf[-ix_mid:] = f.data[0:ix_mid]
                 adjstf[0:ix_mid+1] = f.data[ix_mid:]
                 adjstf = np.ascontiguousarray(adjstf)
-
+                adjt_stfs[ix_f,ix_a,:] = f.data
                 adjt_spect[ix_f,ix_a,:] = np.conjugate(
                     np.fft.rfft(adjstf,n=n) )
                 print("Appended an adjoint src: "+str(time.time()-t0)+' sec')
@@ -334,7 +335,7 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
       
         g1g2_tr = np.multiply(np.conjugate(spec1),spec2)
         corr_temp = np.multiply(g1g2_tr,S)
-
+        
     #######################################################################
     # Apply the 'adjoint source'
     #######################################################################
@@ -348,9 +349,10 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                 #kern[ix_f,i,ix_a] = 2. * np.dot(corr_temp,
                 #    adjt_spect[ix_f,ix_a,:]) * delta
                 # instead of dot product: project to basis
-                kern[ix_f,i,ix_a,:] = basis.coeff(np.real(corr_temp*
-                    adjt_spect[ix_f,ix_a,:] * 2. * delta))
-
+                kern_temp = corr_temp*adjt_spect[ix_f,ix_a,:] * 2. * delta
+                print(kern_temp.max(),kern_temp.min())
+                kern[ix_f,i,ix_a,:] = basis.coeff(kern_temp)
+                
     print("source loop done: "+str(time.time()-t0)+' sec')
     nsrc.model.close()
 
