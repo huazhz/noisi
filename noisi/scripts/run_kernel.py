@@ -280,6 +280,8 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
         source_conf['spectra_nr_parameters']))
 
 
+
+
     basis = BasisFunction(basis_type=source_conf['spectra_decomposition'],
         K=source_conf['spectra_nr_parameters'],N=n_freq)
 
@@ -299,8 +301,8 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
         #S = nsrc.get_spect(i)
         
 
-        #if S.sum() == 0.: 
-        # The spectrum has 0 phase so only checking absolute value here
+        #if S.sum() == 0.:
+            # The spectrum has 0 phase so only checking absolute value here
         #    continue
 
         ####################################################################
@@ -350,8 +352,9 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                 # instead of dot product: project to basis
                 
                #print(kern_temp.max(),kern_temp.min())
+                #* delta)
                 kern[ix_f,i,ix_a,:] = basis.coeff(corr_temp*
-                    adjt_spect[ix_f,ix_a,:] * 2. * delta)
+                    adjt_spect[ix_f,ix_a,:] * 2. )
                 
     print("source loop done: "+str(time.time()-t0)+' sec')
     nsrc.model.close()

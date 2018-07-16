@@ -13,11 +13,13 @@ def sine_taper(k,N):
     """
 
     x = np.linspace(0,N+1,N) # make sure it goes to 0
-    norm = np.sqrt(2./(N+1))
-    y = norm * np.sin((np.pi * k*x)/(N+1))
+
+    
+    norm = np.sqrt(2.)/np.sqrt(float(N-1))
+    y = norm * np.sin(np.pi*k*x/(N+1))
     y[0] = 0.0
     y[-1] = 0.0
-
+   
     return(y)
 
 

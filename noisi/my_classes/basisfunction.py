@@ -20,6 +20,7 @@ class BasisFunction(object):
         self.basis = None
         self.N = N
         
+        
         if type(self.N) == int:
             basis = np.array([
                 self.basis_vector(k,self.N) for k in range(self.K)])
@@ -80,6 +81,6 @@ class BasisFunction(object):
         """
         if k > self.K:
             raise ValueError('Basis has only {} dimensions.'.format(self.K))
-        return(self.basis_func(k,N))
+        return(self.basis_func(k+1,N))
 
 

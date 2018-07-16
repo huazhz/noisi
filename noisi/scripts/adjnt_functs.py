@@ -74,16 +74,25 @@ def energy(corr_o,corr_s,g_speed,window_params):
 
     success = False
 
-    window = wn.get_window(corr_o.stats,g_speed,window_params)
 
-    #if window_params['causal_side']:
+
+    window = wn.get_window(corr_o.stats,g_speed,window_params)
     win = window[0]
-    #else:
-     #   win = window[0][::-1]
+
+    E_plus = np.trapz((corr_s.data * win)**2)
+    E_plus_o = np.trapz((corr_o.data * win)**2)
+
+    E_minus = np.trapz((corr_s.data * win[::-1])**2)
+    E_minus_o  =  np.trapz((corr_o.data * win[::-1])**2)
+
+    E = E_plus + E_minus
+    E_o = E_plus_o + E_minus_o
 
     if window[2]:
-        u1 = 2* np.multiply(np.power(win,2),corr_s.data)
-        u2 = 2* np.multiply(np.power(win[::-1],2),corr_s.data)
+        u1 = 2* np.multiply(np.power(win,2),corr_s.data) * \
+        (E-E_o)
+        u2 = 2* np.multiply(np.power(win[::-1],2),corr_s.data) * \
+        (E-E_o)
         adjt_src = [u1,u2]
         success = True
     else:
