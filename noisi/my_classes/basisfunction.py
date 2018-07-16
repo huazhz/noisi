@@ -36,6 +36,7 @@ class BasisFunction(object):
         N = len(vector)
 
         if self.basis is not None:
+            print(self.basis)
             C = np.dot(np.transpose(self.basis),vector)
 
         else:
