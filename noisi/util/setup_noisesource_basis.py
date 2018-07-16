@@ -119,7 +119,7 @@ for ix_geo in range(len(distribution_types)):
 with h5py.File(os.path.join(sourcepath,'step_0','starting_model.h5'),'w') as fh:
     fh.create_dataset('coordinates',data=grd.astype(np.float64))
     fh.create_dataset('frequencies',data=freq.astype(np.float64))
-    fh.create_dataset('model',data=np.empty((grd.shape[-1],bfunc_K)),
+    fh.create_dataset('model',data=np.zeros((grd.shape[-1],bfunc_K)),
         dtype=np.float32)
 
 
