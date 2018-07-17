@@ -127,7 +127,7 @@ def measurement(source_config,mtype,step,ignore_network,
             #======================================================
 
             tr_s.stats.sac = tr_o.stats.sac.copy() #ToDo: Give the stats to this thing before!
-            tr_s.data = my_centered(tr_s.data,tr_o.stats.npts)
+            tr_s.data = my_centered(tr_s.data,tr_o.stats.npts)[0,:]
             # Get all the necessary information
             info = get_station_info(tr_o.stats)
 

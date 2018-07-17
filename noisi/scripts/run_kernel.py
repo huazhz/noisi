@@ -178,6 +178,10 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
             filtcnt = len(bandpass)    
     
     ntime, n, n_corr, Fs = get_ns(wf1str,source_conf,insta)
+    if n % 2 == 1: #uneven
+        n_freq = int((n+1)/2)
+    else:
+        n_freq = int(n/2+1)
     # use a one-sided taper: The seismogram probably has a non-zero end, 
     # being cut off whereever the solver stopped running.
     taper = cosine_taper(ntime,p=0.01)
@@ -188,33 +192,77 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
 # Prepare filenames and adjoint sources
 ########################################################################   
 
-    filenames = []
-    adjt_srcs = []
-    adjt_srcs_cnt = 0
+    # filenames = []
+    # adjt_srcs = []
+    # adjt_srcs_cnt = 0
 
+    # for ix_f in range(filtcnt):
+    
+    #     filename = kernel+'.{}.npy'.format(ix_f)
+    #     filenames.append(filename)
+    #     #if os.path.exists(filename):
+    #      #   continue
+
+    #     f = Stream()
+    #     for a in adjt:
+    #         adjtfile = a + '*.{}.sac'.format(ix_f)
+    #         adjtfile = glob(adjtfile)
+    #         try:    
+    #             f += read(adjtfile[0])[0]
+    #             f[-1].data = my_centered(f[-1].data,n_corr)
+    #             adjt_srcs_cnt += 1
+    #         except IndexError:
+    #             print('No adjoint source found: {}\n'.format(a))
+    #             break
+
+    #     adjt_srcs.append(f)
+    # if len(f) == 0:
+    #     return()
+    filenames = []
+    #adjt_srcs = []
+    #adjt_srcs_cnt = 0
+    delta = 1./n
+    adjt_spect = np.zeros((filtcnt,len(adjt),n_freq),dtype=np.complex)
+    
     for ix_f in range(filtcnt):
     
         filename = kernel+'.{}.npy'.format(ix_f)
         filenames.append(filename)
-        #if os.path.exists(filename):
-         #   continue
+        
 
-        f = Stream()
-        for a in adjt:
-            adjtfile = a + '*.{}.sac'.format(ix_f)
+        for ix_a in range(len(adjt)):
+            adjtfile = adjt[ix_a] + '*.{}.sac'.format(ix_f)
             adjtfile = glob(adjtfile)
-            try:    
-                f += read(adjtfile[0])[0]
-                f[-1].data = my_centered(f[-1].data,n_corr)
-                adjt_srcs_cnt += 1
-            except IndexError:
-                print('No adjoint source found: {}\n'.format(a))
-                break
 
-        adjt_srcs.append(f)
-    if len(f) == 0:
+            try:
+
+                f = read(adjtfile[0])[0]
+                # transform the adjoint source to frequency domain:
+                ix_mid = f.stats.npts // 2
+                adjstf = np.zeros(n)
+                adjstf[-ix_mid:] = f.data[0:ix_mid]
+                adjstf[0:ix_mid+1] = f.data[ix_mid:]
+                adjstf = np.ascontiguousarray(adjstf)
+                adjt_spect[ix_f,ix_a,:] = np.conjugate(
+                    np.fft.rfft(adjstf,n=n) )
+               
+
+            except IndexError:
+                print('Problems finding adjoint source.')
+                pass
+
+    if (adjt_spect==0.0).sum() == filtcnt * len(adjt) * n_freq:
+        print('No adjoint source found for: '+os.path.basename(wf1str)
+            +' -- '+os.path.basename(wf2str))
         return()
+
     
+    filecnt = 0
+    for f in filenames:
+        if os.path.exists(f):
+            filecnt == 1
+    if filecnt == len(filenames):
+        return()
 
 ########################################################################
 # Compute the kernels
@@ -296,38 +344,34 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
             spec2 = np.fft.rfft(s2,n)
             
           
-            g1g2_tr = np.multiply(np.conjugate(spec1),spec2)
-            c = np.multiply(g1g2_tr,S)
+            #g1g2_tr = np.multiply(np.conjugate(spec1),spec2)
+            #c = np.multiply(g1g2_tr,S)
+            corr_temp = np.multiply(np.conjugate(spec1),spec2)
+            corr_temp = np.multiply(corr_temp,S)
 
         #######################################################################
         # Get Kernel at that location
         #######################################################################   
-            corr_temp = my_centered(np.fft.ifftshift(np.fft.irfft(c,n)),n_corr)
+            #corr_temp = my_centered(np.fft.ifftshift(np.fft.irfft(c,n)),n_corr)
             
         #######################################################################
         # Apply the 'adjoint source'
         #######################################################################
             for ix_f in range(filtcnt):
-                f = adjt_srcs[ix_f]
+                #f = adjt_srcs[ix_f]
 
-                if f==None:
-                    continue
-                for j in range(len(f)):
-                    delta = f[j].stats.delta
-                    adjt_stf = f[j].data
+                #if f==None:
+                #    continue
+                for ix_a in range(len(adjt)):
+                    # inner product of corr_temp and adjoint source
+                    # Factor 2: this is in freq. domain and we have 
+                    # only half the spectrum by rfft (Hermitian symmetric)
+                    kern[ix_f,i,ix_a] = 2. * np.dot(corr_temp,
+                    adjt_spect[ix_f,ix_a,:]) * delta
                     
-                    kern[ix_f,i,j] = np.dot(corr_temp,adjt_stf) * delta
+                    
+                    #kern[ix_f,i,j] = np.dot(corr_temp,adjt_stf) * delta
                   
-                    #elif measr_conf['mtype'] in ['envelope']:
-                    #    if j == 0:
-                    #        corr_temp_h = corr_temp
-                    #        print(corr_temp_h)
-                    #    if j == 1:
-                    #        corr_temp_h = hilbert(corr_temp)
-                    #        print(corr_temp_h)
-                    #    
-                    #    kern[ix_f,i,j] = np.dot(corr_temp,f[j].data) * delta
-                    
            
             
             if i%50000 == 0:

@@ -183,8 +183,7 @@ def possible_correlations(comps):
     out_comps = [comp_dict[comp] for comp in comps]
     d_out_comps = deque(out_comps)
 
-    print(out_comps)
-    print(d_out_comps)
+
     for ix_comp in range(n):
         d_out_comps.rotate()
         correlation_names.extend([out_comps[ix_c]+d_out_comps[ix_c] 

@@ -145,7 +145,7 @@ def adjointsrcs(source_config,mtype,step,ignore_network,bandpass,
                 tr_s_filt = tr_s.copy()
       
                 # Waveforms must have same nr of samples.
-                tr_s_filt.data = my_centered(tr_s_filt.data,tr_o.stats.npts)
+                tr_s_filt.data = my_centered(tr_s_filt.data,tr_o.stats.npts)[0,:]
 
                 bp = bandpass[j]
                 if bp != None:
