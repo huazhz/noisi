@@ -24,8 +24,7 @@ class BasisFunction(object):
         if type(self.N) == int:
             basis = np.array([
                 self.basis_vector(k,self.N) for k in range(self.K)])
-            self.basis = np.ascontiguousarray(np.transpose(basis)
-                ,dtype=np.float32)
+            self.basis = np.ascontiguousarray(basis,dtype=np.float32)
 
 
     def coeff(self,vector):
@@ -36,8 +35,7 @@ class BasisFunction(object):
         N = len(vector)
 
         if self.basis is not None:
-            print(self.basis)
-            C = np.dot(np.transpose(self.basis),vector)
+            C = np.dot(self.basis,vector)
 
         else:
             C = []
@@ -54,7 +52,7 @@ class BasisFunction(object):
 
 
         if self.basis is not None:
-            new_vector = np.dot(self.basis,C)
+            new_vector = np.dot(C,self.basis)
 
         else:
             new_vector = np.zeros(N)

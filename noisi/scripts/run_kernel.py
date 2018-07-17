@@ -344,17 +344,11 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
 
             for ix_a in range(len(adjt)):
 
-                # inner product of corr_temp and adjoint source
-                # Factor 2: this is in freq. domain and we have 
-                # only half the spectrum by rfft (Hermitian symmetric)
-                #kern[ix_f,i,ix_a] = 2. * np.dot(corr_temp,
-                #    adjt_spect[ix_f,ix_a,:]) * delta
+                
                 # instead of dot product: project to basis
                 
-               #print(kern_temp.max(),kern_temp.min())
-                #* delta)
                 kern[ix_f,i,ix_a,:] = basis.coeff(corr_temp*
-                    adjt_spect[ix_f,ix_a,:] * 2. )
+                    adjt_spect[ix_f,ix_a,:])
                 
     print("source loop done: "+str(time.time()-t0)+' sec')
     nsrc.model.close()
