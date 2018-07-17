@@ -242,9 +242,9 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                 adjstf = np.zeros(n)
                 adjstf[-ix_mid:] = f.data[0:ix_mid]
                 adjstf[0:ix_mid+1] = f.data[ix_mid:]
-                adjstf = np.ascontiguousarray(adjstf)
-                adjt_spect[ix_f,ix_a,:] = np.conjugate(
-                    np.fft.rfft(adjstf,n=n) )
+                adjstf = np.fft.rfft(adjstf,n=n)
+                adjstf[1:] *= 2.
+                adjt_spect[ix_f,ix_a,:] = np.conjugate(adjstf)
                
 
             except IndexError:
@@ -364,9 +364,10 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                 #    continue
                 for ix_a in range(len(adjt)):
                     # inner product of corr_temp and adjoint source
-                    # Factor 2: this is in freq. domain and we have 
+                    # Factor 2 above in adjoint source spec:
+                    # this is because we have 
                     # only half the spectrum by rfft (Hermitian symmetric)
-                    kern[ix_f,i,ix_a] = 2. * np.dot(corr_temp,
+                    kern[ix_f,i,ix_a] = np.dot(corr_temp,
                     adjt_spect[ix_f,ix_a,:]) * delta
                     
                     
