@@ -222,9 +222,10 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                 adjstf = np.zeros(n)
                 adjstf[-ix_mid:] = f.data[0:ix_mid]
                 adjstf[0:ix_mid+1] = f.data[ix_mid:]
-                adjstf = np.ascontiguousarray(adjstf)
+                adjspc = np.fft.rfft(adjstf,n=n)
+                adjspc[1:] *= 2. # correct amplitude for RFFT 
                 adjt_spect[ix_f,ix_a,:] = np.conjugate(
-                    np.fft.rfft(adjstf,n=n) )
+                    adjspc)
                 print("Appended an adjoint src: "+str(time.time()-t0)+' sec')
 
                
@@ -348,7 +349,8 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                 # instead of dot product: project to basis
                 
                 kern[ix_f,i,ix_a,:] = basis.coeff(corr_temp*
-                    adjt_spect[ix_f,ix_a,:])
+                    adjt_spect[ix_f,ix_a,:]) # factor 2 is because rfft was
+                # used to compute adjoint spectrum
                 
     print("source loop done: "+str(time.time()-t0)+' sec')
     nsrc.model.close()
