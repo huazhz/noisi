@@ -17,5 +17,7 @@
     "project_name": "testdata",
     "project_path": "../test/testdata/",
     "source_name": "testsrc",
-    "source_path": "../test/testdata/testsrc"
+    "source_path": "../test/testdata/testsrc",
+    "spectra_decomposition": "sine_taper",
+    "spectra_nr_parameters": 1800
 }

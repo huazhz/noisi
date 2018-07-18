@@ -349,8 +349,7 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
                 # instead of dot product: project to basis
                 
                 kern[ix_f,i,ix_a,:] = basis.coeff(corr_temp*
-                    adjt_spect[ix_f,ix_a,:]) # factor 2 is because rfft was
-                # used to compute adjoint spectrum
+                    adjt_spect[ix_f,ix_a,:] * delta) 
                 
     print("source loop done: "+str(time.time()-t0)+' sec')
     nsrc.model.close()
