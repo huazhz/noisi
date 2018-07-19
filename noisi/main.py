@@ -12,7 +12,7 @@ from noisi.scripts.run_correlation import run_corr
 from noisi.util.prepare_sem_input import prepare_specfem_input
 from noisi.scripts.run_measurement import run_measurement
 from noisi.scripts.run_adjointsrcs import run_adjointsrcs
-from noisi.scripts.run_kernel import run_kern
+from noisi.scripts.run_kernel_new import run_kern
 from noisi.scripts.run_preprocessing import run_preprocessing
 from noisi.scripts.run_preprocessing_data import run_preprocess_data
 from noisi.scripts.assemble_gradient import assemble_ascent_dir
