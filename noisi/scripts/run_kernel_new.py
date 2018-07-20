@@ -400,16 +400,19 @@ def run_kern(source_configfile,step,ignore_network=False):
     # Correlation pair loop
     #######################################################################
     
-    if rank > 0:
+    if rank > 0 or size==1:
 
         basis = BasisFunction(basis_type=source_config['spectra_decomposition'],
         K=source_config['spectra_nr_parameters'],N=params.n_freq)
 
-        num_pairs = int( ceil(float(len(p))/float(size-1)) )
-        p_p = p[ (rank-1)*num_pairs : rank*num_pairs]
-        print("Rank %g working on pair nr. %g to %g of %g." 
-        %(rank,(rank-1)*num_pairs,
-        rank*num_pairs,len(p)))
+        if rank > 0:
+            num_pairs = int( ceil(float(len(p))/float(size-1)) )
+            p_p = p[ (rank-1)*num_pairs : rank*num_pairs]
+            print("Rank %g working on pair nr. %g to %g of %g." 
+            %(rank,(rank-1)*num_pairs,
+            rank*num_pairs,len(p)))
+        else:
+            p_p = p
 
         # loop proper
         for cp in p_p:
@@ -432,7 +435,10 @@ wf1,wf2,step))
                 os.path.basename(wf1),os.path.basename(wf2),time.time()-t0))
 
             # pass back to rank 0
-            comm.Send(kern, dest=0, tag=rank)
+            if rank > 0:
+                comm.Send(kern, dest=0, tag=rank)
+            else:
+                grad += kern
 
     else:
 
