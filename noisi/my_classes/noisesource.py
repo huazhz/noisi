@@ -1,7 +1,7 @@
 import numpy as np
 import h5py
 
-from scipy.stats import linregress
+from scipy.signal import hann, tukey
 import os
 try:
     from noisi.util.plot import plot_grid
@@ -54,7 +54,6 @@ class NoiseSource(object):
         try:
             self.surf_area = self.model['surf_areas'][:]
         except KeyError:
-            # approximate as spherical surface elements...
             self.surf_area = np.ones(self.src_loc.shape[-1])
             
 
@@ -68,6 +67,30 @@ class NoiseSource(object):
         if self.model is not None:
             self.model.close()
             #ToDo: Check what parameters/data should be written before file closed
+
+    def filter(self,freq_min,freq_max,window_type='tukey'):
+
+        window = np.zeros(self.freq.shape)
+        ix_1 = np.argmin(np.abs(self.freq[:]-freq_min))
+        ix_2 = np.argmin(np.abs(self.freq[:]-freq_max))
+        
+        if window_type == 'tukey':
+            window[ix_1:ix_2] = tukey(ix_2-ix_1)
+        elif window_type == 'hann':
+            window[ix_1:ix_2] = hann(ix_2-ix_1)
+        else:
+            raise NotImplementedError("Unknown window type.")
+
+        filt_output = np.zeros(self.src_loc.shape[-1])
+
+        for i in range(self.src_loc.shape[-1]):
+
+            filt_output[i] = np.dot(self.spectral_basis.expand(
+                self.spectral_coefficients[i,:]),window)/self.freq.shape[0]
+
+        return(filt_output)
+
+
 
 
 
@@ -107,7 +130,7 @@ class NoiseSource(object):
             max_freq = np.zeros(self.src_loc.shape[-1])
             for i in range(self.src_loc.shape[-1]):
 
-                spectrum = self.get_spect(i,100)
+                spectrum = self.get_spect(i,1000)
                 max_freq[i] = self.freq[spectrum.argmax()]
 
             plot_grid(self.src_loc[0],self.src_loc[1],
