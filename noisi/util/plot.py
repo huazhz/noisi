@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 import numpy as np
 import time
+from scipy.signal import tukey,hann
+from noisi import BasisFunction
 
 
 def plot_grid(map_x,map_y,map_z,stations=[],v=None,globe=False,
@@ -155,6 +157,32 @@ def plot_grid(map_x,map_y,map_z,stations=[],v=None,globe=False,
     else:
         plt.savefig(outfile,dpi=300.)
         plt.close()
+
+def filter(C,freq,freq_min,freq_max,src_loc,
+    window_type='tukey',basis='sine_taper'):
+
+        window = np.zeros(freq.shape)
+        ix_1 = np.argmin(np.abs(freq[:]-freq_min))
+        ix_2 = np.argmin(np.abs(freq[:]-freq_max))
+        
+        if window_type == 'tukey':
+            window[ix_1:ix_2] = tukey(ix_2-ix_1)
+        elif window_type == 'hann':
+            window[ix_1:ix_2] = hann(ix_2-ix_1)
+        else:
+            raise NotImplementedError("Unknown window type.")
+
+        b = BasisFunction(basis,K=C.shape[-1],N=len(freq))
+
+        filt_output = np.zeros(src_loc.shape[-1])
+
+        for i in range(src_loc.shape[-1]):
+
+            filt_output[i] = np.dot(b.expand(
+                C[i,:]),window)/freq.shape[0]
+
+        return(filt_output)
+
 
 def plot_sourcegrid(gridpoints,**kwargs):
 
