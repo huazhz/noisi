@@ -14,8 +14,8 @@ def log_en_ratio_adj(corr_o,corr_s,g_speed,window_params):
 
     window = wn.get_window(corr_o.stats,g_speed,window_params)
     win = window[0]
-    #msr_o = rm.log_en_ratio(corr_o,g_speed,window_params)
-    #msr_s = rm.log_en_ratio(corr_s,g_speed,window_params)
+    msr_o = rm.log_en_ratio(corr_o,g_speed,window_params)
+    msr_s = rm.log_en_ratio(corr_s,g_speed,window_params)
     data = wn.my_centered(corr_s.data,corr_o.stats.npts)
 
     if window[2] == True:
@@ -28,7 +28,7 @@ def log_en_ratio_adj(corr_o,corr_s,g_speed,window_params):
         u_minus = sig_a * win[::-1]
         #adjt_src = 2./pi * (msr_s-msr_o) * (u_plus / E_plus - u_minus / E_minus)
         # I don't know where that factor 1/pi came from. Not consistent with new derivation of kernels
-        adjt_src = 2. * (u_plus / E_plus - u_minus / E_minus)
+        adjt_src = 2. * (msr_s-msr_o) * (u_plus / E_plus - u_minus / E_minus)
         success = True
     else:
         adjt_src = win-win+np.nan
@@ -85,14 +85,13 @@ def energy(corr_o,corr_s,g_speed,window_params):
     E_minus = np.trapz((corr_s.data * win[::-1])**2)
     E_minus_o  =  np.trapz((corr_o.data * win[::-1])**2)
 
-    E = E_plus + E_minus
-    E_o = E_plus_o + E_minus_o
+    
 
     if window[2]:
         u1 = 2* np.multiply(np.power(win,2),corr_s.data) * \
-        (E-E_o)
+        (E_plus-E_plus_o)
         u2 = 2* np.multiply(np.power(win[::-1],2),corr_s.data) * \
-        (E-E_o)
+        (E_minus-E_minus_o)
         adjt_src = [u1,u2]
         success = True
     else:
