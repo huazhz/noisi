@@ -23,11 +23,30 @@ def sine_taper(k,N):
     return(y)
 
 
+def sinc_taper(k,N):
+
+    """
+    Return the sinc function (reference?)
+    :type k: int
+    :param k: return the k'th taper
+    :type N: int
+    :param N: Number of samples
+    :type f_h: float
+    :param f_h: highest frequency in Hz
+    """
+
+    x = np.linspace(0,N+1,N)
+    argu = (x-k)
+    y = np.sinc(argu)
+
+    return(y)
+
 def choose_basis_function(btype):
 
     if btype == 'sine_taper':
         func = sine_taper
-
+    elif btype == 'sinc_taper':
+        func = sinc_taper
     else:
         msg = "Currently implemented basis functions:\
  Sine_taper"

@@ -11,14 +11,15 @@ class BasisFunction(object):
         :type basis_type: string
         :param basis_type: choice of basis function: sine_taper
         :type K: int
-        :param n: number of basis vectors to use
+        :param K: number of basis vectors to use
         """
-
+         
         self.basis_type = basis_type
         self.K = int(K)
         self.basis_func = choose_basis_function(self.basis_type)
         self.basis = None
         self.N = N
+        
         
         
         if type(self.N) == int:
@@ -80,6 +81,10 @@ class BasisFunction(object):
         """
         if k > self.K:
             raise ValueError('Basis has only {} dimensions.'.format(self.K))
+
+        #if self.basis_type == 'sinc_taper':
+        #    args = (self.f_h,self.df)
+
         return(self.basis_func(k+1,N))
 
 
