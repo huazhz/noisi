@@ -8,7 +8,7 @@ import matplotlib.tri as tri
 import numpy as np
 import time
 from scipy.signal import tukey,hann
-from noisi import BasisFunction
+from noisi.my_classes.basisfunction import BasisFunction
 
 
 def plot_grid(map_x,map_y,map_z,stations=[],v=None,globe=False,

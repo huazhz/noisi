@@ -130,7 +130,7 @@ class NoiseSource(object):
             max_freq = np.zeros(self.src_loc.shape[-1])
             for i in range(self.src_loc.shape[-1]):
 
-                spectrum = self.get_spect(i,1000)
+                spectrum = self.get_spect(i)
                 max_freq[i] = self.freq[spectrum.argmax()]
 
             plot_grid(self.src_loc[0],self.src_loc[1],

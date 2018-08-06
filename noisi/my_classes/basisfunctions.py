@@ -1,6 +1,5 @@
 import numpy as np
 
-import numpy as np
 
 def sine_taper(k,N):
 
@@ -31,8 +30,6 @@ def sinc_taper(k,N):
     :param k: return the k'th taper
     :type N: int
     :param N: Number of samples
-    :type f_h: float
-    :param f_h: highest frequency in Hz
     """
 
     x = np.linspace(0,N+1,N)
