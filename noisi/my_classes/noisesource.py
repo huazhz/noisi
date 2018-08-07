@@ -108,6 +108,7 @@ class NoiseSource(object):
         try:
             spectrum = self.spectral_basis.expand(self.
                 spectral_coefficients[iloc,:],N)
+            spectrum = np.clip(spectrum,0.0,spectrum.max())
         except AttributeError:
             spectrum = np.dot(self.spectral_coefficients[:,iloc],
                 self.spectral_basis)
