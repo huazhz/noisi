@@ -1,6 +1,6 @@
 import numpy as np
 from math import pi
-#from noisi.scripts import measurements as rm
+from noisi.scripts import measurements as rm
 from noisi.util import windows as wn
 from scipy.signal import fftconvolve
 from scipy.signal import hilbert

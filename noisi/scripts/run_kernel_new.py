@@ -174,16 +174,18 @@ def get_adjoint_spectra(adjt,params):
         adjtfile = glob(adjtf)
 
         try:
-            f = read(adjtfile[0])[0]
-            # transform the adjoint source to frequency domain:
-            ix_mid = f.stats.npts // 2
             adjstf = np.zeros(params.n)
-            adjstf[-ix_mid:] = f.data[0:ix_mid]
-            adjstf[0:ix_mid+1] = f.data[ix_mid:]
+
+            for j in range(len(adjtfile)):
+                f = read(adjtfile[j])[0]
+                # transform the adjoint source to frequency domain:
+                ix_mid = f.stats.npts // 2
+                adjstf[-ix_mid:] += f.data[0:ix_mid]
+                adjstf[0:ix_mid+1] += f.data[ix_mid:]
+            # to frequency domain
             adjspc = np.fft.rfft(adjstf,n=params.n)
             adjspc[1:] *= 2. # correct amplitude for RFFT 
-            adjt_spect[ix_f,:] = np.conjugate(
-                adjspc)
+            adjt_spect[ix_f,:] = np.conjugate(adjspc)
 
         except IndexError:
             print("Problems finding adjoint source: "+adjtf)
@@ -271,10 +273,12 @@ def compute_kernel(wf1str,wf2str,adjt,
         for ix_f in range(params.filtcnt):
 
             
-                # instead of dot product: project to basis
-                
-            kern[ix_f,i,:] = basis.coeff(corr_temp*
-                    adjt_spect[ix_f,:] * params.delta) 
+            if basis.basis_type == 'discrete':
+                kern[ix_f,i,:] = np.dot(corr_temp,adjt_spect[ix_f]) * delta     
+            # instead of dot product: project to basis
+            else:
+                kern[ix_f,i,:] = basis.coeff(corr_temp*
+                    adjt_spect[ix_f,:] * params.delta_f) 
                 
     if not insta:
         wf1.file.close()
@@ -376,7 +380,7 @@ def run_kern(source_configfile,step,ignore_network=False):
     params.n_corr = n_corr
     Fs = comm.bcast(Fs,root=0)
     params.Fs = Fs
-    params.delta = 1./params.n
+    params.delta_f = 1./params.n * params.Fs
     
     if params.n % 2 == 1: #uneven
         params.n_freq = int((params.n+1)/2)
@@ -395,15 +399,20 @@ def run_kern(source_configfile,step,ignore_network=False):
     print("Rank %g set up parameters: %.4f sec" %(rank,time.time()-t0))
 
     
+    params.freq = np.fft.rfftfreq(params.n,d=1./params.Fs)
     
     #######################################################################
     # Correlation pair loop
     #######################################################################
     
     if rank > 0 or size==1:
-
-        basis = BasisFunction(basis_type=source_config['spectra_decomposition'],
-        K=source_config['spectra_nr_parameters'],N=params.n_freq)
+        # Having each rank set up the basis is simple in the sense that no 
+        # arrays need to be broadcasted
+        basis = BasisFunction.initialize(
+            basis_type=source_config['spectra_decomposition'],
+            K=source_config['spectra_nr_parameters'],N=params.n_freq,
+            freq=params.freq,fmin=source_config['spectra_fmin'],
+            fmax=source_config['spectra_fmax'])
 
         if rank > 0:
             num_pairs = int( ceil(float(len(p))/float(size-1)) )

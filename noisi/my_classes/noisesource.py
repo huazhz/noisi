@@ -36,14 +36,27 @@ class NoiseSource(object):
         self.N = int(len(self.freq))
         
         try:
+            self.f_min = round(self.model['model'].attrs['f_min'],6)
+            self.f_max = round(self.model['model'].attrs['f_max'],6)
+        except KeyError:
+            self.f_min = self.freq[0]
+            self.f_max = self.freq[-1]
+
+        try:
+            self.basis_type = self.model['model'].attrs['spectral_basis']
             K = self.model['model'][:].shape[1]
-            self.spectral_basis = BasisFunction(
-                self.model['model'].attrs['spectral_basis'],K,N=self.N)
+            
+            self.spectral_basis = BasisFunction.initialize(
+                self.basis_type,K,N=self.N,freq=self.freq,
+                fmin=self.f_min,fmax=self.f_max)
             self.spectral_coefficients = self.model['model'] # don't read into memory
+            # frequency range of interest
+
             
         except KeyError:
            # Presumably, these arrays are small and will be used very often 
-           # --> good to have in memory.
+           # --> good to have in memory
+           self.basis_type = 'discrete'
            self.spectral_coefficients = self.model['distr_basis'][:] #distr_basis
            self.spectral_basis = self.model['spect_basis'][:]
            self.N = self.spectral_basis.shape[-1]
