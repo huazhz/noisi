@@ -154,16 +154,18 @@ def plot_grid(map_x,map_y,map_z,stations=[],v=None,globe=False,
 
     #draw station locations
     for sta in stations:
-        m.plot(sta[0],sta[1],'^',color='r',markersize=15,markeredgecolor='0.5',latlon=True)
+        m.plot(sta[0],sta[1],'^',color='lightgreen',markersize=15,markeredgecolor='0.5',latlon=True)
         #m.plot(sta[0],sta[1],'^',color='lime',markersize=5,markeredgecolor='0.5',latlon=True)
     if outfile is None:
         plt.show()
     else:
+        plt.tight_layout()
         plt.savefig(outfile,dpi=300.)
         plt.close()
 
 def filter(C,freq,freq_min,freq_max,src_loc,
-    window_type='tukey',basis='sine_taper'):
+    window_type='tukey',basis='sine_taper',fmin_base=None,
+    fmax_base=None):
 
         window = np.zeros(freq.shape)
         ix_1 = np.argmin(np.abs(freq[:]-freq_min))
@@ -176,7 +178,8 @@ def filter(C,freq,freq_min,freq_max,src_loc,
         else:
             raise NotImplementedError("Unknown window type.")
 
-        b = BasisFunction(basis,K=C.shape[-1],N=len(freq))
+        b = BasisFunction.initialize(basis,K=C.shape[-1],
+            N=len(freq),freq=freq,fmin=fmin_base,fmax=fmax_base)
 
         filt_output = np.zeros(src_loc.shape[-1])
 

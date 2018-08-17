@@ -64,10 +64,8 @@ bfunc_type = source_config['spectra_decomposition']
 bfunc_K = source_config['spectra_nr_parameters']
 
 
-b = BasisFunction(bfunc_type,bfunc_K,N=len(freq))
-
-
-
+b = BasisFunction.initialize(bfunc_type,bfunc_K,N=len(freq),freq=freq,
+    f_min=source_config['spectra_fmin'],f_max=source_config['spectra_fmax'])
 
 
 spectrum_coefficients = np.zeros((len(spectrum_types),bfunc_K))
@@ -134,24 +132,11 @@ with h5py.File(os.path.join(sourcepath,'step_0','starting_model.h5'),'w') as fh:
 
     fh.flush()
     fh['model'].attrs['spectral_basis'] = bfunc_type
+    fh['model'].attrs['f_min'] = source_config['spectra_fmin']
+    fh['model'].attrs['f_max'] = source_config['spectra_fmax']
+    
     fh.create_dataset('surf_areas',data=np.ones(grd.shape[-1]))
 
-with h5py.File(os.path.join(sourcepath,'step_0','base_model.h5'),'w') as fh:
-    fh.create_dataset('coordinates',data=grd.astype(np.float64))
-    fh.create_dataset('frequencies',data=freq.astype(np.float64))
-    fh.create_dataset('model',data=np.empty((grd.shape[-1],bfunc_K)),
-        dtype=np.float32)
-
-
-    for ix_loc in range(grd.shape[-1]):
-
-        for ix_spec in range(len(spectrum_types)):
-        
-            fh['model'][ix_loc,:] += spectrum_coefficients[ix_spec,:]
-
-    fh.flush()
-    fh['model'].attrs['spectral_basis'] = bfunc_type
-    fh.create_dataset('surf_areas',data=np.ones(grd.shape[-1]))
 # plot
 for ix_spec in range(len(spectrum_types)):
     spec = np.zeros(freq.shape)

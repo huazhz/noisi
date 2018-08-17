@@ -350,12 +350,6 @@ def run_kern(source_configfile,step,ignore_network=False):
         src_grid = np.load(os.path.join(source_config['project_path'],
             'sourcegrid.npy'))
         n_traces = src_grid.shape[-1]
-
-        filtcnt = get_nr_measurements(bandpass)
-        kern = np.empty((filtcnt,n_traces,
-            source_config['spectra_nr_parameters']))
-        grad = np.zeros((filtcnt,n_traces,
-            source_config['spectra_nr_parameters']))
     else:
 
         n_time = 0
@@ -367,12 +361,10 @@ def run_kern(source_configfile,step,ignore_network=False):
 
 
     p = comm.bcast(p,root=0)
-    params.p = p
 
 
     n_traces = comm.bcast(n_traces,root=0)
     params.n_traces = n_traces
-
     n_time = comm.bcast(n_time,root=0)
     n = comm.bcast(n,root=0)
     params.n = n
@@ -394,72 +386,86 @@ def run_kern(source_configfile,step,ignore_network=False):
     # being cut off whereever the solver stopped running.
     params.taper = cosine_taper(n_time,p=0.01)
     params.taper[0:n_time//2] = 1.0
-    
-
+    params.freq = np.fft.rfftfreq(params.n,d=1./params.Fs)
     print("Rank %g set up parameters: %.4f sec" %(rank,time.time()-t0))
 
+    #######################################################################
+    # Basis functions
+    #######################################################################
+    # Having each rank set up the basis is simple in the sense that no 
+        # arrays need to be broadcasted
+    basis = BasisFunction.initialize(
+        basis_type=source_config['spectra_decomposition'],
+        K=source_config['spectra_nr_parameters'],N=params.n_freq,
+        freq=params.freq,fmin=source_config['spectra_fmin'],
+        fmax=source_config['spectra_fmax'])
+    print("Rank %g set up spectral basis: %.4f sec" %(rank,time.time()-t0))
+
+
+    #######################################################################
+    # Arrays
+    #######################################################################
+    filtcnt = get_nr_measurements(bandpass)
     
-    params.freq = np.fft.rfftfreq(params.n,d=1./params.Fs)
-    
+    if rank == 0:
+        grad = np.zeros((filtcnt,params.n_traces,
+            source_config['spectra_nr_parameters']))
     #######################################################################
     # Correlation pair loop
     #######################################################################
     
-    if rank > 0 or size==1:
-        # Having each rank set up the basis is simple in the sense that no 
-        # arrays need to be broadcasted
-        basis = BasisFunction.initialize(
-            basis_type=source_config['spectra_decomposition'],
-            K=source_config['spectra_nr_parameters'],N=params.n_freq,
-            freq=params.freq,fmin=source_config['spectra_fmin'],
-            fmax=source_config['spectra_fmax'])
+    roundcnt = 1
+    while p != []:
+        
+        kern = np.zeros((filtcnt,params.n_traces,
+            source_config['spectra_nr_parameters']))
+        grad_p = np.zeros((filtcnt,params.n_traces,
+            source_config['spectra_nr_parameters']))
 
-        if rank > 0:
-            num_pairs = int( ceil(float(len(p))/float(size-1)) )
-            p_p = p[ (rank-1)*num_pairs : rank*num_pairs]
-            print("Rank %g working on pair nr. %g to %g of %g." 
-            %(rank,(rank-1)*num_pairs,
-            rank*num_pairs,len(p)))
-        else:
-            p_p = p
+        p_p = p[0:size]
+        del p[0:size]
 
-        # loop proper
-        for cp in p_p:
-            
-            try:
-                wf1,wf2,src,adjt = paths_input(cp,source_config,
+        try:
+            p_p = p_p[rank]
+            wf1,wf2,src,adjt = paths_input(p_p,source_config,
                     params.step,ignore_network,insta)
+            try:
+                kern = compute_kernel(wf1,wf2,adjt,src,source_config,
+                    insta,params,basis)
+
+                print("Rank %g computed kernel %s,%s: %.4f sec" %(rank,
+                    os.path.basename(wf1),os.path.basename(wf2),time.time()-t0))
                 
             except:
                 print('Could not find necessary input. \
 \nCheck if files {},{} and step_{}/base_model.h5 file are available.'.format(
 wf1,wf2,step))
-                continue
+                pass
 
+        except IndexError:
+            print("Nothing to do for rank %g." %rank)
+            pass
 
-            kern = compute_kernel(wf1,wf2,adjt,src,source_config,
-                insta,params,basis)
+        
+        
+        # everyone waits here
+        comm.Barrier()
 
-            print("Rank %g computed kernel %s,%s: %.4f sec" %(rank,
-                os.path.basename(wf1),os.path.basename(wf2),time.time()-t0))
+        # gather the results
+        comm.Reduce(kern,grad_p,MPI.SUM,root=0)
 
-            # pass back to rank 0
-            if rank > 0:
-                comm.Send(kern, dest=0, tag=rank)
-            else:
-                grad += kern
-
-    else:
-
-        # rank 0 waits around for kernels to be passed back to it.
-        status = MPI.Status()
-        print(time.time()-t0)
-        comm.Recv(kern,source=MPI.ANY_SOURCE,tag=MPI.ANY_TAG,status=status)
-        print(time.time()-t0)
-        grad += kern
-
-    comm.Barrier()
+        # rank 0 adds to the gradient
+        if rank == 0:
+            grad += grad_p
+            print('Round %g concluded.' %roundcnt)
+            roundcnt += 1
+        comm.Barrier()
+    # end of loop
 
     # Finally: Save the gradient.
     if rank == 0:
         np.save(output_path,grad)
+
+
+
+

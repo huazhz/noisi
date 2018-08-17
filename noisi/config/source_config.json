@@ -20,5 +20,7 @@
     "source_name": "",
 	"ktype":"td",
     "spectra_decomposition": "sine_taper",
-    "spectra_nr_parameters": 64
+    "spectra_nr_parameters": 8,
+    "spectra_fmin": 0.0,
+    "spectra_fmax": 0.5
 }
