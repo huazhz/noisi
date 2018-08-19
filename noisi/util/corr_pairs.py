@@ -1,6 +1,37 @@
 from glob import glob
 import os
 
+def get_kernel_pairs_from_adjoint_sources(source_dir,step,auto_corr=False,
+    only_observed=True,channel='*'):
+    """
+    Find for which station pairs kernels should be computed.
+    """
+
+    adjt_sources = glob(os.path.join(source_dir,'step_'+str(step),
+        'adjt','*.sac'))
+    print(os.path.join(source_dir,'step_'+str(step),
+        'adjt','*.sac'))
+
+    kernel_pairs = []
+
+    for adjt in adjt_sources:
+
+        adjt = os.path.basename(adjt)
+        sta1 = adjt.split('--')[0]
+        sta2 = adjt.split('--')[1]
+
+        sta1 = '{}  {}'.format(*sta1.split('.')[0:2])
+        sta2 = '{}  {}'.format(*sta2.split('.')[0:2])
+
+        kernel_pairs.append(sta1+'--'+sta2)
+        #print(kernel_pairs)
+
+    kernel_pairs = set(kernel_pairs)
+
+    kernel_pairs = list(k.split('--') for k in kernel_pairs)
+    return(kernel_pairs)
+
+
 def define_correlationpairs(proj_dir,auto_corr=False,
     only_observed=True,channel='*'):
     """

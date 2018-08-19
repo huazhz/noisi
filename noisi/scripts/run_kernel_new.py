@@ -209,7 +209,7 @@ def compute_kernel(wf1str,wf2str,adjt,
     if (adjt_spect==0.0).sum() == params.filtcnt * params.n_freq:
         print('No adjoint source found for: '+os.path.basename(wf1str)
             +' -- '+os.path.basename(wf2str))
-        return()
+        return(kern)
     
 
     ########################################################################
@@ -288,7 +288,7 @@ def compute_kernel(wf1str,wf2str,adjt,
 
        
 
-def correlation_pairs_to_compute(source_config):
+def correlation_pairs_to_compute(source_config,step):
 
     auto_corr = False # default value
     try:
@@ -296,7 +296,8 @@ def correlation_pairs_to_compute(source_config):
     except KeyError:
         pass
 
-    p = define_correlationpairs(source_config['project_path'],auto_corr)
+    p = get_kernel_pairs_from_adjoint_sources(source_config['source_path'],
+        step,auto_corr)
     print('Nr all possible kernels %g ' %len(p))
     
     # Remove pairs for which no observation is available
@@ -343,7 +344,7 @@ def run_kern(source_configfile,step,ignore_network=False):
         output_path = os.path.join(source_config['source_path'],
             'step_'+str(step),'grad','grad_all.npy')
 
-        p = correlation_pairs_to_compute(source_config)
+        p = correlation_pairs_to_compute(source_config,step)
 
         n_time, n, n_corr, Fs = get_ns(config,source_config,insta)
 
@@ -422,8 +423,9 @@ def run_kern(source_configfile,step,ignore_network=False):
         grad_p = np.zeros((filtcnt,params.n_traces,
             source_config['spectra_nr_parameters']))
 
-        p_p = p[0:size]
-        del p[0:size]
+        p_p = p[0:len(p):ceil(len(p)/size)]
+        del p[0:len(p):ceil(len(p)/size)]
+        print(p_p)
 
         try:
             p_p = p_p[rank]
