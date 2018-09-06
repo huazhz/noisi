@@ -67,7 +67,6 @@ def smooth_gaussian(inputfile,outputfile,coordfile,sigma,cap,thresh):
         print(80*'*')
         print(j)
         for i in range(input_array.shape[-1]):
-
             print(i)
             array_in = input_array[j,:,i]
             
@@ -81,8 +80,8 @@ def smooth_gaussian(inputfile,outputfile,coordfile,sigma,cap,thresh):
                 sig = sigma[i]
             except IndexError:
                 if rank == 0: 
-                    print("Only one value for smoothing length given,\
-                        using that uniformly on all frequencies.")
+                    print("Less values for smoothing length given than K,\
+                        using last value for remaining k.")
                 sig = sigma[-1]
                 
             # prepare Gaussian
@@ -90,20 +89,19 @@ def smooth_gaussian(inputfile,outputfile,coordfile,sigma,cap,thresh):
             b = 2.*sig**2
             # rank x works on this part:
             for k in range(rank*chunk_size,(rank+1)*chunk_size):
-                print(k)
+                if k%1000==0:
+                    print(k)    
                 try:
                     # Gaussian smoothing
                     dist = get_distance(x,y,z,x[k],y[k],z[k])
                     
-                    weight = a * np.exp(-(dist**2)/b)
-                    
-                    
-                    idx = weight >= (thresh * weight.max())
-                    smoothed_array[j,k,i] = np.sum(np.multiply(weight[idx],
-                        values[idx])) / idx.sum()
-                    
                 except IndexError:
-                    pass
+                    break
+
+                weight = a * np.exp(-(dist**2)/b)
+                idx = weight >= (thresh * weight.max())
+                smoothed_array[j,k,i] = np.sum(np.multiply(weight[idx],
+                    values[idx])) / idx.sum()
 
     comm.Barrier()
     comm.Reduce(smoothed_array,smoothed_array_out,MPI.SUM,root=0)
