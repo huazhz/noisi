@@ -1,0 +1,8 @@
+{
+    "update_scheme": "steepest_descent",
+    "step_length": 1000000,
+    "min_snr": 0.0,
+    "min_stack_length": 1,
+    "nr_measurements_for_linesearch": 1000,
+    "data_selection_for_linesearch": "random"
+}

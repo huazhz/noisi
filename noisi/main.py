@@ -17,6 +17,7 @@ from noisi.scripts.run_preprocessing import run_preprocessing
 from noisi.scripts.run_preprocessing_data import run_preprocess_data
 from noisi.scripts.assemble_gradient import assemble_ascent_dir
 from noisi.util.setup_new import setup_proj
+from noisi.scripts.create_update_new import create_update
 @click.group()
 def run():
     """
@@ -188,6 +189,15 @@ def step_test(source_model,step):
     source_model = os.path.join(source_model,'source_config.json')
     run_corr(source_model,step,steplengthrun=True)
 
+###########################################################################
+### Create an update
+###########################################################################
+@run.command(help='Create source model update (incl. directories for new it.')
+@click.argument('source_model')
+@click.argument('step')
+def update(source_model,step):
+    source_model = os.path.join(source_model,'source_config.json')
+    create_update(source_model,step)
 
 ###########################################################################
 ### Assemble the gradient by multplying kernels by residuals and summing

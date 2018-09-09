@@ -18,7 +18,7 @@ class NoiseSource(object):
     functions.
     
     """
-    def __init__(self,model,w='r+'):
+    def __init__(self,model,w='r'):
             
         # Model is an hdf5 file which contains the basis and weights of the source model!
         
