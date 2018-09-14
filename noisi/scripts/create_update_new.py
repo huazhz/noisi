@@ -26,14 +26,15 @@ def prepare_test_steplength(msrfile,source_config,newdir,min_snr,min_stck,
 
     # Read in the csv files of measurement.
     data = pd.read_csv(msrfile[0])
-    data.l2_norm.values *= weights[0]
-    for i in range[1,len(msrfile)]:
+    data.l2_norm *= weights[0]
+
+    for i in range(1,len(msrfile)):
         # We get the addition of both datasets, which means that l2_norms of all
         # measurements are added up and the stations pairs with max overall misfit are chosen
-        data.l2_norm += pd.read_csv(msrfile[i]).l2_norm.values *weights[i]
-        data.nstack += pd.read_csv(msrfile[i]).nstack.values
+        data.l2_norm += pd.read_csv(msrfile[i]).l2_norm*weights[i]
+        print(data.l2_norm)
+        data.nstack += pd.read_csv(msrfile[i]).nstack
 
-    print(data)
     # Get a set of n randomly chosen station pairs. Criteria: minimum SNR, 
     # ---> prelim_stations.txt
 
