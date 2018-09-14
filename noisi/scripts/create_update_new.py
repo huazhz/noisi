@@ -20,20 +20,18 @@ def update_sourcemodel(weighted_grad,new_sourcemodel,update_scheme,step_length):
 
 
 def prepare_test_steplength(msrfile,source_config,newdir,min_snr,min_stck,
-    data_selection_scheme,select_nr):
+    data_selection_scheme,select_nr,weights):
     
     obs_dir = os.path.join(source_config['source_path'],'observed_correlations')
 
-
     # Read in the csv files of measurement.
-    for mfile in msrfile:
-        if 'data' not in locals():
-            data = pd.read_csv(mfile)
-        else:
-            # We get the addition of both datasets, which means that l2_norms of all
-            # measurements are added up and the stations pairs with max overall misfit are chosen
-            data.l2_norm += pd.read_csv(mfile).l2_norm.values
-            data.nstack += pd.read_csv(mfile).nstack.values
+    data = pd.read_csv(msrfile[0])
+    data.l2_norm.values *= weights[0]
+    for i in range[1,len(msrfile)]:
+        # We get the addition of both datasets, which means that l2_norms of all
+        # measurements are added up and the stations pairs with max overall misfit are chosen
+        data.l2_norm += pd.read_csv(msrfile[i]).l2_norm.values *weights[i]
+        data.nstack += pd.read_csv(msrfile[i]).nstack.values
 
     print(data)
     # Get a set of n randomly chosen station pairs. Criteria: minimum SNR, 
@@ -80,7 +78,8 @@ def prepare_test_steplength(msrfile,source_config,newdir,min_snr,min_stck,
         
     # save metadata
     data_accept.to_csv(os.path.join(newdir,'dat_for_steptest.cumulativeL2.csv'))
-
+    os.system('cp {} {}'.format(os.path.join(source_config['source_path'],
+        'inverse_config.json'),newdir))
     return()
 
 
@@ -88,7 +87,8 @@ def prepare_test_steplength(msrfile,source_config,newdir,min_snr,min_stck,
 ############ Preparation procedure #################################################
 #prepare_test_steplength = False
 # where is the measurement database located?
-def create_update(source_model,oldstep):
+def create_update(source_model,oldstep,step_length):
+    step_length = float(step_length)
     source_config=json.load(open(source_model))
     datadir = os.path.join(source_config['source_path'],'step_' + str(oldstep))
     measr_config = json.load(open(os.path.join(source_config['source_path'],
@@ -99,7 +99,7 @@ def create_update(source_model,oldstep):
     weighted_grad = np.zeros(grad[0,:,:].shape)
     for i in range(len(weights)):
         weighted_grad += grad[i,:,:]*weights[i]
-        
+
     msrfile = glob(os.path.join(datadir,"{}.*.measurement.csv".
         format(measr_config['mtype'])))
 
@@ -109,7 +109,6 @@ def create_update(source_model,oldstep):
         'inverse_config.json')))
     min_snr = inv_config['min_snr']
     min_stck = inv_config['min_stack_length']
-    step_length = inv_config['step_length']
     update_scheme = inv_config['update_scheme']
     data_selection_scheme = inv_config['data_selection_for_linesearch']
     select_nr = inv_config["nr_measurements_for_linesearch"]
@@ -125,14 +124,19 @@ def create_update(source_model,oldstep):
         os.mkdir(os.path.join(newdir,'adjt'))
         os.mkdir(os.path.join(newdir,'grad'))
         os.mkdir(os.path.join(newdir,'kern'))
+        os.system('cp {} {}'.format(os.path.join(source_config['source_path'],
+        'inverse_config.json'),newdir))
+        os.system('cp {} {}'.format(os.path.join(source_config['source_path'],
+        'measr_config.json'),newdir))
+        os.system('cp {} {}'.format(source_model,newdir))
         
         prepare_test_steplength(msrfile,source_config,newdir,min_snr,min_stck,
-            data_selection_scheme,select_nr)
+            data_selection_scheme,select_nr,weights)
 
+
+    os.mkdir(os.path.join(newdir,'steptest_'+str(step_length)))
     os.system('cp {} {}'.format(os.path.join(datadir,'starting_model.h5'),newdir))
     new_sourcemodel = os.path.join(newdir,'starting_model.h5')
-
-
 
     update_sourcemodel(weighted_grad,new_sourcemodel,update_scheme,step_length)
 

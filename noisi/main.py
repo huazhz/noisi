@@ -195,9 +195,10 @@ def step_test(source_model,step):
 @run.command(help='Create source model update (incl. directories for new it.')
 @click.argument('source_model')
 @click.argument('step')
-def update(source_model,step):
+@click.argument('step_length')
+def update(source_model,step,step_length):
     source_model = os.path.join(source_model,'source_config.json')
-    create_update(source_model,step)
+    create_update(source_model,step,step_length)
 
 ###########################################################################
 ### Assemble the gradient by multplying kernels by residuals and summing
