@@ -65,7 +65,7 @@ bfunc_K = source_config['spectra_nr_parameters']
 
 
 b = BasisFunction.initialize(bfunc_type,bfunc_K,N=len(freq),freq=freq,
-    f_min=source_config['spectra_fmin'],f_max=source_config['spectra_fmax'])
+    fmin=source_config['spectra_fmin'],fmax=source_config['spectra_fmax'])
 
 
 spectrum_coefficients = np.zeros((len(spectrum_types),bfunc_K))
