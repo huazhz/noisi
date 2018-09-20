@@ -13,7 +13,7 @@ from scipy.signal import hilbert
 # *********************************************
 #scale = 1e20 #ununsed
 steps = np.arange(-14, 0, 0.1)
-mtype = 'ln_sq_env'#'ln_energy_ratio'
+mtype = 'envelope'#'ln_energy_ratio'
 sacdict = {'dist':1e6}
 g_speed = 3700.
 window_params                   =    {}

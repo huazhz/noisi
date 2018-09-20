@@ -67,6 +67,24 @@ def square_envelope(corr_o,corr_s,g_speed,
     success = True
     return adjt_src, success
 
+
+def envelope(corr_o,corr_s,g_speed,
+    window_params):
+    success = False
+    env_s = np.sqrt(corr_s.data**2 + np.imag(hilbert(corr_s.data))**2)
+    env_o = np.sqrt(corr_o.data**2 + np.imag(hilbert(corr_o.data))**2)
+
+    d_env_1 =  corr_s.data 
+    d_env_2 =  (np.imag(hilbert(corr_s.data)))
+
+    u1 = (env_s - env_o)/env_s * d_env_1
+    u2 = np.imag(hilbert((env_s - env_o)/env_s * d_env_2))
+
+    adjt_src = u1 - u2
+    
+    success = True
+    return adjt_src, success
+
 def ln_square_envelope(corr_o,corr_s,g_speed,
     window_params):
     success = False
@@ -124,6 +142,9 @@ def get_adj_func(mtype):
 
     elif mtype == 'square_envelope':
         func = square_envelope
+
+    elif mtype == 'envelope':
+        func = envelope
 
     elif mtype == 'ln_sq_env':
         func = ln_square_envelope

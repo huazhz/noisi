@@ -77,7 +77,7 @@ def paths_input(cp,source_conf,step,ignore_network,instaseis):
                  'base_model.h5')
   
     # Adjoint source
-    if measr_conf['mtype'] in ['energy_diff','envelope']:
+    if measr_conf['mtype'] in ['energy_diff']:
         adj_src_basicnames = [ os.path.join(source_conf['source_path'],
                  'step_'+str(step),
                  'adjt',"{}--{}.c".format(sta1,sta2)),
@@ -235,7 +235,6 @@ def g1g2_kern(wf1str,wf2str,kernel,adjt,
             adjtfile = glob(adjtfile)
 
             try:
-
                 f = read(adjtfile[0])[0]
                 # transform the adjoint source to frequency domain:
                 ix_mid = f.stats.npts // 2
