@@ -79,7 +79,7 @@ def paths_input(cp,source_conf,step,ignore_network,instaseis):
                  'base_model.h5')
   
     # Adjoint source
-    if measr_conf['mtype'] in ['energy_diff','envelope']:
+    if measr_conf['mtype'] in ['energy_diff']:
         adj_src_basicnames = [ os.path.join(source_conf['source_path'],
                  'step_'+str(step),
                  'adjt',"{}--{}.c".format(sta1,sta2)),

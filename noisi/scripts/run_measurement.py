@@ -183,7 +183,7 @@ def measurement(source_config,mtype,step,ignore_network,
                     continue
 
             # timeseries-like measurements:
-            if mtype in ['square_envelope',
+            if mtype in ['square_envelope','envelope',
             'waveform','windowed_waveform']:
                 # l2_so = np.trapz(0.5*(msr_s-msr_o)**2) * tr_o.stats.delta
                 l2_so = 0.5 * np.sum(np.power((msr_s-msr_o),2))#0.5*np.dot((msr_s-msr_o),(msr_s-msr_o))

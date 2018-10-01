@@ -61,7 +61,7 @@ def plot_grid(map_x,map_y,map_z,stations=[],v=None,globe=False,
 
 
     if v is None:
-        v = np.max(map_z)
+        v = np.max(np.abs(map_z))
 
     if sequential:
         cm = plt.cm.magma
@@ -129,7 +129,8 @@ def plot_grid(map_x,map_y,map_z,stations=[],v=None,globe=False,
     if normalize and v==1.:
         cbar.set_ticks([-1.0,-0.5,0.,0.5,1.0])
     elif normalize and v!=1.:
-        cbar.set_ticks([-v,-v/2.,0.,v/2.,v])
+        v = 1.
+        cbar.set_ticks([-1.0,-0.5,0.,0.5,1.0])
 
 
     if globe:
@@ -157,7 +158,9 @@ def plot_grid(map_x,map_y,map_z,stations=[],v=None,globe=False,
         m.plot(sta[0],sta[1],'^',color='lightgreen',markersize=15,markeredgecolor='0.5',latlon=True)
         #m.plot(sta[0],sta[1],'^',color='lime',markersize=5,markeredgecolor='0.5',latlon=True)
     if outfile is None:
+        plt.tight_layout()
         plt.show()
+
     else:
         plt.tight_layout()
         plt.savefig(outfile,dpi=300.)
